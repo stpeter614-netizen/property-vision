@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { use, useMemo, useState } from 'react';
 
 const groups = [
   ['Flooring', [['Standard Oak', 0], ['Premium Oak', 2500], ['Stone', 4000]]],
@@ -16,15 +16,13 @@ type SavedConfiguration = { id: string; unitId: string; choices: Record<string,s
 function makeId() { return 'PV-' + Math.random().toString(36).slice(2, 7).toUpperCase() + '-' + Date.now().toString(36).toUpperCase(); }
 
 export default function Customize({ params }: Props) {
-  const [unitId, setUnitId] = useState('');
   const [choices, setChoices] = useState<Record<string,string>>({});
   const [saved, setSaved] = useState<SavedConfiguration | null>(null);
   const [enquiryOpen, setEnquiryOpen] = useState(false);
   const [notice, setNotice] = useState('');
   const [name, setName] = useState('');
   const [contact, setContact] = useState('');
-
-  void params.then(({ unitId: id }) => setUnitId(id));
+  const { unitId } = use(params);
 
   const total = useMemo(() => 295000 + groups.reduce(
     (sum, [group, options]) => sum + (options.find(([option]) => option === choices[group])?.[1] ?? 0), 0
@@ -60,7 +58,7 @@ export default function Customize({ params }: Props) {
 
   return (
     <main className="shell">
-      <nav className="nav"><a href={unitId ? '/projects/aurelia-residences/units/' + unitId : '/projects/aurelia-residences'}>← Unit {unitId || '—'}</a><span>Customize</span></nav>
+      <nav className="nav"><a href={unitId ? '/projects/aurelia-residences/units/' + unitId : '/projects/aurelia-residences'}>← Unit {unitId}</a><span>Customize</span></nav>
       <section>
         <p className="eyebrow">CONFIGURATION</p><h1>Make it yours</h1>
         <p>Select approved finishes and see the configured price update instantly.</p>
