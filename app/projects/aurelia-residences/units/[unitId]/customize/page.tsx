@@ -16,7 +16,9 @@ type SavedConfiguration = { id: string; unitId: string; choices: Record<string,s
 
 function makeId() { return 'PV-' + Math.random().toString(36).slice(2, 7).toUpperCase() + '-' + Date.now().toString(36).toUpperCase(); }
 
-export default function Customize { const { unitId } = use(params); void trackPropertyEvent('customizer_opened',{unitId});({ params }: Props) {
+export default function Customize({ params }: Props) {
+  const { unitId } = use(params);
+  void trackPropertyEvent('customizer_opened', { unitId }); void trackPropertyEvent('customizer_opened',{unitId});({ params }: Props) {
   const [choices, setChoices] = useState<Record<string,string>>({});
   const [saved, setSaved] = useState<SavedConfiguration | null>(null);
   const [enquiryOpen, setEnquiryOpen] = useState(false);
