@@ -68,7 +68,7 @@ export default function DeveloperLeads() {
         {loading ? <p className="notice">Loading enquiries…</p> : visible.length === 0 ? <div className="panel"><h2>No enquiries yet</h2><p>New buyer enquiries will appear here.</p></div> :
           <div className="grid">{visible.map((item) => <article className="card" key={item.id}>
             <p className="eyebrow">{item.status.toUpperCase()}</p>
-            <h2>{item.buyer_name}</h2>
+            <h2><a href={'/developer/leads/' + item.id}>{item.buyer_name}</a></h2>
             <p>{item.buyer_contact}</p>
             <p><strong>Unit:</strong> {item.unit_id || '—'} · <strong>Configuration:</strong> {item.configuration_id || '—'}</p>
             {item.message && <p>{item.message}</p>}<div className="actions">{statuses.filter((status) => status !== item.status).slice(0, 3).map((status) => <button key={status} type="button" className="button secondary" disabled={busy === item.id} onClick={() => updateStatus(item.id, status)}>{busy === item.id ? 'Saving…' : status[0].toUpperCase() + status.slice(1)}</button>)}</div>
