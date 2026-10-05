@@ -1,0 +1,4 @@
+import { NextResponse } from 'next/server';
+import { createClient } from '@supabase/supabase-js';
+function db(){const url=process.env.NEXT_PUBLIC_SUPABASE_URL;const key=process.env.SUPABASE_SERVICE_ROLE_KEY;return url&&key?createClient(url,key,{auth:{persistSession:false}}):null}
+export async function GET(){const client=db();if(!client)return NextResponse.json({units:[],connected:false});const {data,error}=await client.from('property_units').select('id,unit_number,status,floor_number,bedrooms,bathrooms,area_sqm,price_cents').order('unit_number');if(error)return NextResponse.json({error:error.message},{status:500});return NextResponse.json({units:data??[],connected:true})}
