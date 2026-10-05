@@ -1,13 +1,36 @@
+const units = ['301','302','303','304','305','306'];
+
 export default function Home() {
   return (
-    <main style={{fontFamily:"Arial, sans-serif",padding:40,maxWidth:1100,margin:"0 auto"}}>
-      <p style={{letterSpacing:2}}>PROPERTY VISION</p>
-      <h1 style={{fontSize:48}}>Experience Property Before It Exists.</h1>
-      <p style={{fontSize:20,lineHeight:1.5}}>Explore developments, enter apartments, configure finishes, see pricing, save a configuration and enquire.</p>
-      <section style={{marginTop:40,padding:24,border:"1px solid #ddd",borderRadius:16}}>
-        <h2>Aurelia Residences</h2>
-        <p>Interactive property sales experience.</p>
-        <p>3 bedrooms · 2 bathrooms · configurable finishes</p>
+    <main className="shell">
+      <nav className="nav">
+        <strong>Property Vision</strong>
+        <a href="/developer">For Developers</a>
+      </nav>
+      <section className="hero">
+        <div>
+          <p className="eyebrow">PROPERTY EXPERIENCE INFRASTRUCTURE</p>
+          <h1>Experience Property Before It Exists.</h1>
+          <p className="lead">Explore developments, enter apartments, configure finishes, see the price change instantly, save your configuration and enquire.</p>
+          <a className="button" href="/projects/aurelia-residences">Explore Aurelia Residences</a>
+        </div>
+      </section>
+      <section>
+        <p className="eyebrow">HOW IT WORKS</p>
+        <h2>From development to exact configuration.</h2>
+        <div className="option">
+          <strong>Explore</strong><span> → </span><strong>Choose a unit</strong><span> → </span><strong>Customize</strong><span> → </span><strong>Price</strong><span> → </span><strong>Enquire</strong>
+        </div>
+        <div className="grid">
+          {units.map((unit) => (
+            <a className="card" href={'/projects/aurelia-residences/units/' + unit} key={unit}>
+              <p className="eyebrow">UNIT {unit}</p>
+              <h3>3-bedroom residence</h3>
+              <p>142 m² · 2 bathrooms</p>
+              <strong>$295,000</strong>
+            </a>
+          ))}
+        </div>
       </section>
     </main>
   );
