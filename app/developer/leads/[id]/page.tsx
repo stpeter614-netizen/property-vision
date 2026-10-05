@@ -70,7 +70,7 @@ export default function LeadDetail() {
         {error && <div className="notice">{error}</div>}
 
         <div className="grid">
-          <article className="card"><h2>Property</h2><p><strong>Unit:</strong> {item.unit_id || 'Not supplied'}</p><p><strong>Configuration:</strong> {item.configuration_id || 'Not supplied'}</p></article>
+          <article className="card"><h2>Property</h2><p><strong>Unit:</strong> {item.unit_id || 'Not supplied'}</p><p><strong>Configuration:</strong> {item.configuration_id ? <a href={'/developer/configuration?id=' + encodeURIComponent(item.configuration_id)}>{item.configuration_id} →</a> : 'Not supplied'}</p></article>
           <article className="card"><h2>Lead status</h2><p><strong>{item.status.toUpperCase()}</strong></p><div className="actions">{statuses.map((status) => <button key={status} className={status === item.status ? 'button' : 'button secondary'} disabled={saving} onClick={() => updateStatus(status)}>{status}</button>)}</div></article>
         </div>
 
