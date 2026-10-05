@@ -10,7 +10,7 @@ export default async function UnitPage({ params }: Props) {
         <h1>3 bedrooms · 2 bathrooms</h1>
         <p className="lead">142 m² · Living room · Dining · Kitchen · Laundry · Balcony · Parking</p>
         <p className="price">$295,000 starting price</p>
-        <a className="button" href={'/projects/aurelia-residences/units/' + id + '/customize'}>Customize this apartment</a>
+        <div className="option"><a className="button" href={'/projects/aurelia-residences/units/' + id + '/experience'}>Enter Home</a><a className="button" href={'/projects/aurelia-residences/units/' + id + '/customize'}>Customize</a></div>
       </div></section>
     </main>
   );
