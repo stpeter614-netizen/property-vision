@@ -1,6 +1,6 @@
 'use client';
 
-import { use, useMemo, useState } from 'react';
+import { use, useEffect, useMemo, useState } from 'react';
 
 const groups = [
   ['Flooring', [['Standard Oak', 0], ['Premium Oak', 2500], ['Stone', 4000]]],
@@ -24,6 +24,20 @@ export default function Customize({ params }: Props) {
   const [contact, setContact] = useState('');
   const { unitId } = use(params);
 
+  useEffect(() => {
+    const raw = new URLSearchParams(window.location.search).get('configuration');
+    if (!raw) return;
+    try {
+      const shared = JSON.parse(decodeURIComponent(raw)) as SavedConfiguration;
+      if (shared.unitId !== unitId || !shared.choices) return;
+      setChoices(shared.choices);
+      setSaved(shared);
+      setNotice('Shared configuration loaded: ' + shared.id);
+    } catch {
+      setNotice('The shared configuration link is invalid or incomplete.');
+    }
+  }, [unitId]);
+
   const total = useMemo(() => 295000 + groups.reduce(
     (sum, [group, options]) => sum + (options.find(([option]) => option === choices[group])?.[1] ?? 0), 0
   ), [choices]);
@@ -41,7 +55,8 @@ export default function Customize({ params }: Props) {
     const configuration = existing ?? { id: makeId(), unitId, choices, total, createdAt: new Date().toISOString() };
     localStorage.setItem('property-vision:last-configuration', JSON.stringify(configuration));
     setSaved(configuration);
-    const url = window.location.origin + window.location.pathname + '?configuration=' + encodeURIComponent(configuration.id);
+    const payload = encodeURIComponent(JSON.stringify(configuration));
+    const url = window.location.origin + window.location.pathname + '?configuration=' + payload;
     try { await navigator.clipboard.writeText(url); setNotice('Share link copied: ' + configuration.id); }
     catch { window.prompt('Copy this configuration link', url); }
   }
