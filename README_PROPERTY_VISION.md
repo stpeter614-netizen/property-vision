@@ -23,3 +23,6 @@ The repository is the canonical source of truth. V55 build gate and application 
 
 ## Runtime health
 `GET /api/health` provides a lightweight deployment health check and returns the service status and timestamp.
+
+
+<!-- CI checkpoint -->
