@@ -20,6 +20,7 @@ export default function DeveloperLeads() {
   const [connected, setConnected] = useState(true);
   const [filter, setFilter] = useState('all');
   const [loading, setLoading] = useState(true);
+  const [busy, setBusy] = useState<string | null>(null);
 
   useEffect(() => {
     fetch('/api/developer/enquiries')
@@ -37,6 +38,17 @@ export default function DeveloperLeads() {
     () => filter === 'all' ? items : items.filter((item) => item.status === filter),
     [items, filter],
   );
+
+  async function updateStatus(id: string, status: string) {
+    setBusy(id);
+    try {
+      const response = await fetch('/api/developer/enquiries/status', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id, status }) });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || 'Unable to update');
+      setItems((current) => current.map((item) => item.id === id ? { ...item, status } : item));
+    } catch (error) { window.alert(error instanceof Error ? error.message : 'Unable to update lead'); }
+    finally { setBusy(null); }
+  }
 
   return (
     <main className="shell">
@@ -59,7 +71,7 @@ export default function DeveloperLeads() {
             <h2>{item.buyer_name}</h2>
             <p>{item.buyer_contact}</p>
             <p><strong>Unit:</strong> {item.unit_id || '—'} · <strong>Configuration:</strong> {item.configuration_id || '—'}</p>
-            {item.message && <p>{item.message}</p>}
+            {item.message && <p>{item.message}</p>}<div className="actions">{statuses.filter((status) => status !== item.status).slice(0, 3).map((status) => <button key={status} type="button" className="button secondary" disabled={busy === item.id} onClick={() => updateStatus(item.id, status)}>{busy === item.id ? 'Saving…' : status[0].toUpperCase() + status.slice(1)}</button>)}</div>
             <small>{new Date(item.created_at).toLocaleString()}</small>
           </article>)}</div>}
       </section>
