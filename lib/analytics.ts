@@ -4,13 +4,10 @@ export async function trackPropertyEvent(
 ) {
   try {
     if (typeof window === 'undefined') return;
-
     const key = 'property-vision-session';
     const existing = localStorage.getItem(key);
     const sessionId = existing || crypto.randomUUID();
-
     if (!existing) localStorage.setItem(key, sessionId);
-
     await fetch('/api/analytics', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
