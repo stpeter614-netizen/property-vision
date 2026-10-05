@@ -16,3 +16,6 @@ Included:
 - V25 secure asset catalogue
 
 This is a generated foundation from the supplied files; it is not claimed to be the missing V55 source archive.
+
+## V55 recovery
+The repository is the canonical source of truth. V55 build gate and application foundation are being restored here before deployment.
