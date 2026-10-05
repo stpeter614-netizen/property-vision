@@ -1,0 +1,1 @@
+export default function NotFound(){return <main className='shell'><section className='hero'><div><p className='eyebrow'>PROPERTY VISION</p><h1>Page not found.</h1><p className='lead'>The property experience you requested is not available at this address.</p><a className='button' href='/'>Return to Property Vision</a></div></section></main>}
