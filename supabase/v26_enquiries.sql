@@ -31,8 +31,13 @@ create or replace function update_property_enquiry_status(
 ) returns jsonb
 language plpgsql
 security definer
-as $$
+set search_path = public
+as $
 begin
+  if p_status not in ('new','contacted','qualified','reserved','closed','lost') then
+    raise exception 'invalid_status';
+  end if;
+
   update property_enquiries
   set status = p_status, updated_at = now()
   where id = p_enquiry_id;
@@ -43,3 +48,8 @@ begin
 
   return jsonb_build_object('id', p_enquiry_id, 'status', p_status);
 end $$;
+
+
+revoke all on function update_property_enquiry_status(uuid,text) from public;
+revoke all on function update_property_enquiry_status(uuid,text) from anon;
+revoke all on function update_property_enquiry_status(uuid,text) from authenticated;
