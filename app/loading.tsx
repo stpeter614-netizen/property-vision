@@ -1,0 +1,1 @@
+export default function Loading(){return <main className='shell'><section className='hero'><div><p className='eyebrow'>PROPERTY VISION</p><h1>Loading experience…</h1><p className='lead'>Preparing the property experience.</p></div></section></main>}
