@@ -1,6 +1,9 @@
-import { trackPropertyEvent } from '@/lib/analytics';
-type Props = { params: Promise<{ unitId: string }> };
+'use client';
 
+import { use, useEffect } from 'react';
+import { trackPropertyEvent } from '@/lib/analytics';
+
+type Props = { params: Promise<{ unitId: string }> };
 
 const rooms = [
   { id: 'living', name: 'Living room', detail: 'Light, flooring, furniture and view' },
@@ -14,45 +17,15 @@ const rooms = [
   { id: 'balcony', name: 'Balcony', detail: 'Outdoor finish and view' },
 ];
 
-export default async function ApartmentExperience({ params }: Props) {
-  const { unitId } = await params;
-  void trackPropertyEvent('room_experience_opened', { unitId });
+export default function ApartmentExperience({ params }: Props) {
+  const { unitId } = use(params);
+  useEffect(() => { void trackPropertyEvent('room_experience_opened', { unitId }); }, [unitId]);
+
   return (
     <main className="shell">
-      <nav className="nav">
-        <a href={'/projects/aurelia-residences/units/' + unitId}>← Unit {unitId}</a>
-        <span>Interactive apartment</span>
-      </nav>
-
-      <section className="hero">
-        <div>
-          <p className="eyebrow">ENTER HOME · UNIT {unitId}</p>
-          <h1>Experience the apartment room by room.</h1>
-          <p className="lead">Choose a space to explore. Your selections stay tied to Unit {unitId} and can become one exact buyer configuration.</p>
-          <a className="button" href={'/projects/aurelia-residences/units/' + unitId + '/customize'}>Customize the whole apartment</a>
-        </div>
-      </section>
-
-      <section>
-        <div className="nav">
-          <div>
-            <p className="eyebrow">ROOMS</p>
-            <h2>Explore Unit {unitId}</h2>
-          </div>
-          <span>142 m² · 3 bedrooms · 2 bathrooms</span>
-        </div>
-
-        <div className="grid">
-          {rooms.map((room) => (
-            <a className="card" href={'/projects/aurelia-residences/units/' + unitId + '/customize?room=' + room.id} key={room.id}>
-              <p className="eyebrow">{room.id.replaceAll('-', ' ')}</p>
-              <h3>{room.name}</h3>
-              <p>{room.detail}</p>
-              <strong>Explore →</strong>
-            </a>
-          ))}
-        </div>
-      </section>
+      <nav className="nav"><a href={'/projects/aurelia-residences/units/' + unitId}>← Unit {unitId}</a><span>Interactive apartment</span></nav>
+      <section className="hero"><div><p className="eyebrow">ENTER HOME · UNIT {unitId}</p><h1>Experience the apartment room by room.</h1><p className="lead">Choose a space to explore. Your selections stay tied to Unit {unitId} and can become one exact buyer configuration.</p><a className="button" href={'/projects/aurelia-residences/units/' + unitId + '/customize'}>Customize the whole apartment</a></div></section>
+      <section><div className="grid">{rooms.map(room => <a className="card" key={room.id} href={'/projects/aurelia-residences/units/' + unitId + '/customize?room=' + room.id}><h2>{room.name}</h2><p>{room.detail}</p><span>Explore this space →</span></a>)}</div></section>
     </main>
   );
 }
