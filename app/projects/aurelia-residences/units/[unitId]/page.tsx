@@ -1,7 +1,10 @@
+import { trackPropertyEvent } from '@/lib/analytics';
+
 type Props = { params: Promise<{ unitId: string }> };
 
 export default async function UnitPage({ params }: Props) {
   const { unitId: id } = await params;
+  void trackPropertyEvent('unit_opened', { unitId: id });
   return (
     <main className="shell">
       <nav className="nav"><a href="/projects/aurelia-residences">← Aurelia Residences</a><span>Unit {id}</span></nav>
