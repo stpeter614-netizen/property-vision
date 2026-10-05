@@ -1,4 +1,6 @@
+import { trackPropertyEvent } from '@/lib/analytics';
 type Props = { params: Promise<{ unitId: string }> };
+
 
 const rooms = [
   { id: 'living', name: 'Living room', detail: 'Light, flooring, furniture and view' },
@@ -14,6 +16,7 @@ const rooms = [
 
 export default async function ApartmentExperience({ params }: Props) {
   const { unitId } = await params;
+  void trackPropertyEvent('room_experience_opened', { unitId });
   return (
     <main className="shell">
       <nav className="nav">
