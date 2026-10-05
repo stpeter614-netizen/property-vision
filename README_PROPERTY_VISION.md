@@ -19,3 +19,7 @@ This is a generated foundation from the supplied files; it is not claimed to be 
 
 ## V55 recovery
 The repository is the canonical source of truth. V55 build gate and application foundation are being restored here before deployment.
+
+
+## Runtime health
+`GET /api/health` provides a lightweight deployment health check and returns the service status and timestamp.
