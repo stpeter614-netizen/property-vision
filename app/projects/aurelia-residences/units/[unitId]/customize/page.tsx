@@ -18,15 +18,13 @@ function makeId() { return 'PV-' + Math.random().toString(36).slice(2, 7).toUppe
 
 export default function Customize({ params }: Props) {
   const { unitId } = use(params);
-  void trackPropertyEvent('customizer_opened', { unitId }); void trackPropertyEvent('customizer_opened',{unitId});({ params }: Props) {
+  useEffect(() => { void trackPropertyEvent('customizer_opened', { unitId }); }, [unitId]);
   const [choices, setChoices] = useState<Record<string,string>>({});
   const [saved, setSaved] = useState<SavedConfiguration | null>(null);
   const [enquiryOpen, setEnquiryOpen] = useState(false);
   const [notice, setNotice] = useState('');
   const [name, setName] = useState('');
   const [contact, setContact] = useState('');
-  const { unitId } = use(params);
-
   useEffect(() => {
     const raw = new URLSearchParams(window.location.search).get('configuration');
     if (!raw) return;
