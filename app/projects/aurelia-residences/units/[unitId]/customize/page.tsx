@@ -48,7 +48,7 @@ export default function Customize({ params }: Props) {
     const configuration = { id: makeId(), unitId, choices, total, createdAt: new Date().toISOString() };
     localStorage.setItem('property-vision:last-configuration', JSON.stringify(configuration));
     setSaved(configuration);
-    setNotice('Configuration saved on this device: ' + configuration.id);
+    setNotice('Configuration saved on this device: ' + configuration.id); void trackPropertyEvent('configuration_saved', { unitId, configurationId: configuration.id, total });
   }
 
   async function persistEnquiry(configuration: SavedConfiguration) {
@@ -82,7 +82,7 @@ export default function Customize({ params }: Props) {
     setSaved(configuration);
     const payload = encodeURIComponent(JSON.stringify(configuration));
     const url = window.location.origin + window.location.pathname + '?configuration=' + payload;
-    try { await navigator.clipboard.writeText(url); setNotice('Share link copied: ' + configuration.id); }
+    try { await navigator.clipboard.writeText(url); setNotice('Share link copied: ' + configuration.id); void trackPropertyEvent('configuration_shared', { unitId, configurationId: configuration.id, total }); }
     catch { window.prompt('Copy this configuration link', url); }
   }
 
@@ -93,7 +93,7 @@ export default function Customize({ params }: Props) {
     localStorage.setItem('property-vision:enquiry', JSON.stringify({ configuration, name: name.trim(), contact: contact.trim(), createdAt: new Date().toISOString() }));
     setSaved(configuration);
     setEnquiryOpen(false);
-    setNotice('Enquiry saved with configuration ' + configuration.id);
+    setNotice('Enquiry saved with configuration ' + configuration.id); void trackPropertyEvent('enquiry_submitted', { unitId, configurationId: configuration.id, total }); void persistEnquiry(configuration);
   }
 
   return (
@@ -103,7 +103,7 @@ export default function Customize({ params }: Props) {
         <p className="eyebrow">CONFIGURATION</p><h1>Make it yours</h1>
         <p>Select approved finishes and see the configured price update instantly.</p>
         {groups.map(([group, options]) => <div className="option" key={group}><h2>{group}</h2>{options.map(([option, price]) =>
-          <button className={choices[group] === option ? 'selected' : ''} onClick={() => setChoices((current) => ({ ...current, [group]: option }))} key={option} type="button">{option}{price ? ' +$' + price.toLocaleString() : ' Included'}</button>
+          <button className={choices[group] === option ? 'selected' : ''} onClick={() => setChoices((current) => ({ ...current, [group]: option })); void trackPropertyEvent('option_selected', { unitId, group, option, price })} key={option} type="button">{option}{price ? ' +$' + price.toLocaleString() : ' Included'}</button>
         )}</div>)}
         <div className="summary">
           <div><span>Configured price</span><strong>${total.toLocaleString()}</strong><small>Unit {unitId || '—'} · Save, share or enquire about this exact configuration.</small></div>
