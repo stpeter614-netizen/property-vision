@@ -25,11 +25,11 @@ export default function LeadDetail() {
   const [error, setError] = useState('');
 
   useEffect(() => {
-    fetch('/api/developer/enquiries')
+    fetch('/api/developer/enquiries?id=' + encodeURIComponent(params.id))
       .then(async (response) => {
         const data = await response.json();
         if (!response.ok) throw new Error(data.error || 'Unable to load lead');
-        const found = (data.enquiries || []).find((entry: Enquiry) => entry.id === params.id);
+        const found = data.enquiries?.[0];
         if (!found) throw new Error('Lead not found');
         setItem(found);
       })
