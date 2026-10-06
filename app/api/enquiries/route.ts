@@ -60,6 +60,16 @@ export async function POST(request: Request) {
     if (!project) return NextResponse.json({ error: 'Project not found.' }, { status: 400 });
   }
 
+  if (unitId) {
+    const unitQuery = client.from('property_units').select('id,project_id').eq('id', unitId).maybeSingle();
+    const { data: unit, error } = await unitQuery;
+    if (error) return NextResponse.json({ error: 'Unable to validate unit.' }, { status: 500 });
+    if (!unit) return NextResponse.json({ error: 'Unit not found.' }, { status: 400 });
+    if (projectId && unit.project_id !== projectId) {
+      return NextResponse.json({ error: 'Unit does not belong to the selected project.' }, { status: 400 });
+    }
+  }
+
   if (configurationId) {
     const { data: configuration, error } = await client.from('property_configurations')
       .select('id,unit_id').eq('id', configurationId).maybeSingle();
