@@ -1,6 +1,13 @@
 'use client';
 
 import { useMemo, useState } from 'react';
+import { createClient } from '@supabase/supabase-js';
+
+function authClient() {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  return url && key ? createClient(url, key, { auth: { persistSession: true, autoRefreshToken: true } }) : null;
+}
 
 const workTypes = ['Renovation','Repair','Maintenance','Upgrade','Inspection','Installation'];
 const urgencies = ['Routine','Normal','Urgent','Emergency'];
@@ -34,12 +41,15 @@ export default function PropertyWorkPage() {
     if (!title.trim()) { setMessage('Enter a work title.'); return; }
     setSaving(true);
     try {
+      const client = authClient();
+      const session = (await client?.auth.getSession())?.data.session;
+      if (!session) throw new Error('Sign in to Property Vision before creating a work request.');
       const numericBudget = budget.replace(/[^0-9.]/g,'');
       const budgetCents = numericBudget ? Math.round(Number(numericBudget) * 100) : null;
       if (budgetCents !== null && !Number.isFinite(budgetCents)) throw new Error('Enter a valid budget.');
       const response = await fetch('/api/property/work', {
         method:'POST',
-        headers:{'Content-Type':'application/json'},
+        headers:{'Content-Type':'application/json','Authorization':'Bearer ' + session.access_token},
         body:JSON.stringify({
           propertyRecordId,
           title:title.trim(),
