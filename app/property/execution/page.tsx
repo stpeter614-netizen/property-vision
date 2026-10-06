@@ -9,6 +9,7 @@ export default function ExecutionPage(){
  const [message,setMessage]=useState('');
  const [workOrderId,setWorkOrderId]=useState('');
  const [assignmentId,setAssignmentId]=useState('');
+ const [assignmentStatus,setAssignmentStatus]=useState('proposed');
  const [provider,setProvider]=useState('');
  const [estimate,setEstimate]=useState('');
  const i=Math.max(0,stages.indexOf(stage));
@@ -24,6 +25,7 @@ export default function ExecutionPage(){
    <label className="card">Estimate<input value={estimate} onChange={e=>setEstimate(e.target.value)} placeholder="e.g. KES 485,000"/></label>
    <label className="card">Assigned provider<input value={provider} onChange={e=>setProvider(e.target.value)} placeholder="Provider / contractor"/></label>
   </section>
+  <section className="card"><strong>Provider assignment</strong><p>Current: {assignmentStatus.replace('_',' ')}</p><div className="progress">{['proposed','accepted','scheduled','in_progress','completed'].map(s=><button key={s} className={assignmentStatus===s?'button':'button secondary'} type="button" onClick={()=>persistAssignment(s)}>{s.replace('_',' ')}</button>)}</div></section>
   <section className="card"><strong>Persistence</strong><p>{message}</p></section>
   <section className="card"><strong>Current status</strong><h2>{stage.replace('_',' ')}</h2><p>Next: {stage==='requested'?'prepare estimate':stage==='quoted'?'approve estimate':stage==='approved'?'assign and schedule':stage==='scheduled'?'start work':stage==='in_progress'?'record completion':'workflow complete'}.</p></section>
  </main>;
