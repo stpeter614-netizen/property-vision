@@ -138,23 +138,3 @@ export default function Customize({ params }: Props) {
     </main>
   );
 }
- + price.toLocaleString() : ' Included'}</button>
-        )}</div>)}
-        <div className="summary">
-          <div><span>Configured price</span><strong>${total.toLocaleString()}</strong><small>Unit {unitId || '—'} · Save, share or enquire about this exact configuration.</small></div>
-          <div className="actions">
-            <button className="button" type="button" onClick={saveConfiguration}>Save configuration</button>
-            <button className="button secondary" type="button" onClick={shareConfiguration}>Share</button>
-            <button className="button secondary" type="button" onClick={() => setEnquiryOpen(true)}>Enquire</button>
-          </div>
-        </div>
-        {notice && <p className="notice">{notice}</p>}
-        {enquiryOpen && <div className="panel"><h2>Enquire about this configuration</h2><p>Your exact unit, choices and configured price will be attached to this enquiry.</p>
-          <input aria-label="Name" placeholder="Your name" value={name} onChange={(event) => setName(event.target.value)} />
-          <input aria-label="Phone or email" placeholder="Phone or email" value={contact} onChange={(event) => setContact(event.target.value)} />
-          <div className="actions"><button className="button" type="button" onClick={submitEnquiry}>Send enquiry</button><button className="button secondary" type="button" onClick={() => setEnquiryOpen(false)}>Cancel</button></div>
-        </div>}
-      </section>
-    </main>
-  );
-}
