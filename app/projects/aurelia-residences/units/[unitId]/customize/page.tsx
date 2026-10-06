@@ -102,9 +102,24 @@ export default function Customize({ params }: Props) {
       <section>
         <p className="eyebrow">CONFIGURATION</p><h1>Make it yours</h1>
         <p>Select approved finishes and see the configured price update instantly.</p>
-        {groups.map(([group, options]) => <div className="option" key={group}><h2>{group}</h2>{options.map(([option, price]) =>
-          <button className={choices[group] === option ? 'selected' : ''} onClick={() => { setChoices((current) => ({ ...current, [group]: option })); void trackPropertyEvent('option_selected', { unitId, group, option, price }); }} key={option} type="button">{option}{price ? ' +
-        )}</div>)}
+        {groups.map(([group, options]) => (
+          <div className="option" key={group}>
+            <h2>{group}</h2>
+            {options.map(([option, price]) => (
+              <button
+                className={choices[group] === option ? 'selected' : ''}
+                onClick={() => {
+                  setChoices((current) => ({ ...current, [group]: option }));
+                  void trackPropertyEvent('option_selected', { unitId, group, option, price });
+                }}
+                key={option}
+                type="button"
+              >
+                {option}{price ? ' +$' + price.toLocaleString() : ' Included'}
+              </button>
+            ))}
+          </div>
+        ))}
         <div className="summary">
           <div><span>Configured price</span><strong>${total.toLocaleString()}</strong><small>Unit {unitId || '—'} · Save, share or enquire about this exact configuration.</small></div>
           <div className="actions">
