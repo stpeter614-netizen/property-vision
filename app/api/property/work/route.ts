@@ -16,6 +16,20 @@ function dbFromRequest(request: Request) {
   });
 }
 
+
+export async function GET(request: Request) {
+  const client = dbFromRequest(request);
+  if (!client) return NextResponse.json({ error: 'Authentication required.' }, { status: 401 });
+  const { data: userData, error: userError } = await client.auth.getUser();
+  if (userError || !userData.user) return NextResponse.json({ error: 'Authentication required.' }, { status: 401 });
+  const id = new URL(request.url).searchParams.get('id')?.trim() || '';
+  if (!/^[0-9a-fA-F-]{36}$/.test(id)) return NextResponse.json({ error: 'Invalid work order.' }, { status: 400 });
+  const { data, error } = await client.from('property_work_orders').select('id,property_record_id,title,work_type,urgency,location,description,budget_cents,status,requested_at').eq('id', id).maybeSingle();
+  if (error) return NextResponse.json({ error: 'Unable to load the work order.' }, { status: 500 });
+  if (!data) return NextResponse.json({ error: 'Work order not found.' }, { status: 404 });
+  return NextResponse.json({ workOrder: data, connected: true });
+}
+
 export async function POST(request: Request) {
   const client = dbFromRequest(request);
   if (!client) return NextResponse.json({ error: 'Authentication required.' }, { status: 401 });
