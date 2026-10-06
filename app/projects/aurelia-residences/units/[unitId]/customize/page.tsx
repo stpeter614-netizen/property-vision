@@ -103,7 +103,27 @@ export default function Customize({ params }: Props) {
         <p className="eyebrow">CONFIGURATION</p><h1>Make it yours</h1>
         <p>Select approved finishes and see the configured price update instantly.</p>
         {groups.map(([group, options]) => <div className="option" key={group}><h2>{group}</h2>{options.map(([option, price]) =>
-          <button className={choices[group] === option ? 'selected' : ''} onClick={() => setChoices((current) => ({ ...current, [group]: option })); void trackPropertyEvent('option_selected', { unitId, group, option, price })} key={option} type="button">{option}{price ? ' +$' + price.toLocaleString() : ' Included'}</button>
+          <button className={choices[group] === option ? 'selected' : ''} onClick={() => { setChoices((current) => ({ ...current, [group]: option })); void trackPropertyEvent('option_selected', { unitId, group, option, price }); }} key={option} type="button">{option}{price ? ' +
+        )}</div>)}
+        <div className="summary">
+          <div><span>Configured price</span><strong>${total.toLocaleString()}</strong><small>Unit {unitId || '—'} · Save, share or enquire about this exact configuration.</small></div>
+          <div className="actions">
+            <button className="button" type="button" onClick={saveConfiguration}>Save configuration</button>
+            <button className="button secondary" type="button" onClick={shareConfiguration}>Share</button>
+            <button className="button secondary" type="button" onClick={() => setEnquiryOpen(true)}>Enquire</button>
+          </div>
+        </div>
+        {notice && <p className="notice">{notice}</p>}
+        {enquiryOpen && <div className="panel"><h2>Enquire about this configuration</h2><p>Your exact unit, choices and configured price will be attached to this enquiry.</p>
+          <input aria-label="Name" placeholder="Your name" value={name} onChange={(event) => setName(event.target.value)} />
+          <input aria-label="Phone or email" placeholder="Phone or email" value={contact} onChange={(event) => setContact(event.target.value)} />
+          <div className="actions"><button className="button" type="button" onClick={submitEnquiry}>Send enquiry</button><button className="button secondary" type="button" onClick={() => setEnquiryOpen(false)}>Cancel</button></div>
+        </div>}
+      </section>
+    </main>
+  );
+}
+ + price.toLocaleString() : ' Included'}</button>
         )}</div>)}
         <div className="summary">
           <div><span>Configured price</span><strong>${total.toLocaleString()}</strong><small>Unit {unitId || '—'} · Save, share or enquire about this exact configuration.</small></div>
