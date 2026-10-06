@@ -7,7 +7,13 @@ function optionalUuid(value: unknown) {
   return value == null || value === '' || (typeof value === 'string' && UUID_RE.test(value)) ? (value || null) : undefined;
 }
 
+const MAX_BODY_BYTES = 12000;
+
 export async function POST(request: Request) {
+  const contentLength = Number(request.headers.get('content-length') || 0);
+  if (Number.isFinite(contentLength) && contentLength > MAX_BODY_BYTES) {
+    return NextResponse.json({ error: 'Request body is too large.' }, { status: 413 });
+  }
   const body = await request.json().catch(() => null);
   if (!body || typeof body !== 'object') {
     return NextResponse.json({ error: 'Invalid request body.' }, { status: 400 });
@@ -66,6 +72,9 @@ export async function POST(request: Request) {
     metadata
   });
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  if (error) {
+    console.error('Analytics insert failed:', error.message);
+    return NextResponse.json({ error: 'Unable to record analytics event.' }, { status: 500 });
+  }
   return NextResponse.json({ recorded: true, connected: true });
 }
