@@ -17,6 +17,12 @@ create table if not exists property_service_providers (
   updated_at timestamptz not null default now()
 );
 
+alter table property_service_providers
+  add column if not exists developer_id uuid references developers(id) on delete set null;
+
+create index if not exists property_provider_developer_idx
+  on property_service_providers(developer_id, status);
+
 create table if not exists property_work_order_assignments (
   id uuid primary key default gen_random_uuid(),
   work_order_id uuid not null references property_work_orders(id) on delete cascade,
@@ -92,8 +98,10 @@ with check (
     select 1
     from property_work_orders w
     join property_records r on r.id=w.property_record_id
+    join property_service_providers p on p.id=property_work_order_assignments.provider_id
     where w.id=property_work_order_assignments.work_order_id
       and r.developer_id is not null
       and developer_role(r.developer_id) in ('owner','admin','manager')
+      and (p.developer_id is null or p.developer_id = r.developer_id)
   )
 );
