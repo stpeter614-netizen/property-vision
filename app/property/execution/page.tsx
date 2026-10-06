@@ -1,8 +1,15 @@
 'use client';
 
 import { useState } from 'react';
+import { createClient } from '@supabase/supabase-js';
 
 const stages=['requested','quoted','approved','scheduled','in_progress','completed'];
+
+function authClient() {
+ const url=process.env.NEXT_PUBLIC_SUPABASE_URL;
+ const key=process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+ return url && key ? createClient(url,key,{auth:{persistSession:true,autoRefreshToken:true}}) : null;
+}
 
 export default function ExecutionPage(){
  const [stage,setStage]=useState('requested');
@@ -13,20 +20,29 @@ export default function ExecutionPage(){
  const [provider,setProvider]=useState('');
  const [estimate,setEstimate]=useState('');
  const i=Math.max(0,stages.indexOf(stage));
+
  async function persistAssignment(next:string){
   setAssignmentStatus(next); setMessage('Saving provider assignment...');
   if(!assignmentId){setMessage('Enter an assignment ID to persist provider status.');return;}
-  const res=await fetch('/api/property/execution',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'assignment_status',id:assignmentId,status:next})});
+  const client=authClient();
+  const session=(await client?.auth.getSession())?.data.session;
+  if(!session){setMessage('Sign in to Property Vision to save changes.');return;}
+  const res=await fetch('/api/property/execution',{method:'POST',headers:{'Content-Type':'application/json','Authorization':`Bearer ${session.access_token}`},body:JSON.stringify({action:'assignment_status',id:assignmentId,status:next})});
   const data=await res.json().catch(()=>({}));
   setMessage(res.ok ? 'Provider assignment saved.' : (data.error || 'Could not save provider assignment.'));
  }
+
  async function persist(next:string){
   setStage(next); setMessage('Saving work order...');
   if(!workOrderId){setMessage('UI state updated. Enter a work-order ID to persist it.');return;}
-  const res=await fetch('/api/property/execution',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'work_order_status',id:workOrderId,status:next})});
+  const client=authClient();
+  const session=(await client?.auth.getSession())?.data.session;
+  if(!session){setMessage('Sign in to Property Vision to save changes.');return;}
+  const res=await fetch('/api/property/execution',{method:'POST',headers:{'Content-Type':'application/json','Authorization':`Bearer ${session.access_token}`},body:JSON.stringify({action:'work_order_status',id:workOrderId,status:next})});
   const data=await res.json().catch(()=>({}));
   setMessage(res.ok ? 'Work order saved.' : (data.error || 'Could not save work order.'));
  }
+
  return <main className="shell">
   <nav className="nav"><a href="/">PROPERTY VISION</a><span>Execution</span></nav>
   <section className="hero"><p className="eyebrow">PROPERTY WORKFLOW</p><h1>One execution view from request to completion.</h1><p className="lead">Keep the property, scope, estimate, provider and delivery status connected.</p></section>
