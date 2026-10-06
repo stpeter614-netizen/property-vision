@@ -21,18 +21,22 @@ export default function DeveloperLeads() {
   const [filter, setFilter] = useState('all');
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState<string | null>(null);
+  const [page, setPage] = useState(1);
+  const [hasMore, setHasMore] = useState(false);
 
   useEffect(() => {
-    fetch('/api/developer/enquiries')
+    setLoading(true);
+    fetch('/api/developer/enquiries?page=' + page + '&pageSize=50')
       .then(async (response) => {
         const data = await response.json();
         if (!response.ok) throw new Error(data.error || 'Unable to load enquiries');
         setItems(data.enquiries || []);
         setConnected(data.connected !== false);
+        setHasMore(data.hasMore === true);
       })
       .catch(() => setConnected(false))
       .finally(() => setLoading(false));
-  }, []);
+  }, [page]);
 
   const visible = useMemo(
     () => filter === 'all' ? items : items.filter((item) => item.status === filter),
@@ -60,7 +64,7 @@ export default function DeveloperLeads() {
         {!connected && <div className="notice">Database connection is not configured yet. The workspace is ready for live enquiries.</div>}
         <div className="actions">
           {['all', ...statuses].map((status) => (
-            <button key={status} type="button" className={filter === status ? 'button' : 'button secondary'} onClick={() => setFilter(status)}>
+            <button key={status} type="button" className={filter === status ? 'button' : 'button secondary'} onClick={() => { setFilter(status); setPage(1); }}>
               {status === 'all' ? 'All' : status[0].toUpperCase() + status.slice(1)}
             </button>
           ))}
@@ -74,6 +78,11 @@ export default function DeveloperLeads() {
             {item.message && <p>{item.message}</p>}<div className="actions">{statuses.filter((status) => status !== item.status).slice(0, 3).map((status) => <button key={status} type="button" className="button secondary" disabled={busy === item.id} onClick={() => updateStatus(item.id, status)}>{busy === item.id ? 'Saving…' : status[0].toUpperCase() + status.slice(1)}</button>)}</div>
             <small>{new Date(item.created_at).toLocaleString()}</small>
           </article>)}</div>}
+        <div className="actions" aria-label="Lead pages">
+          <button type="button" className="button secondary" disabled={loading || page === 1} onClick={() => setPage((current) => Math.max(1, current - 1))}>Previous</button>
+          <span>Page {page}</span>
+          <button type="button" className="button secondary" disabled={loading || !hasMore} onClick={() => setPage((current) => current + 1)}>Next</button>
+        </div>
       </section>
     </main>
   );
