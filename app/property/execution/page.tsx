@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { createClient } from '@supabase/supabase-js';
 
 const stages=['requested','quoted','approved','scheduled','in_progress','completed'];
@@ -20,6 +20,26 @@ export default function ExecutionPage(){
  const [provider,setProvider]=useState('');
  const [estimate,setEstimate]=useState('');
  const i=Math.max(0,stages.indexOf(stage));
+ useEffect(() => {
+  const id = new URLSearchParams(window.location.search).get('workOrderId');
+  if (!id) return;
+  setWorkOrderId(id);
+  (async () => {
+   const client = authClient();
+   const session = (await client?.auth.getSession())?.data.session;
+   if (!session) { setMessage('Sign in to Property Vision to load this work order.'); return; }
+   const res = await fetch('/api/property/work?id=' + encodeURIComponent(id), {
+    headers: { Authorization: 'Bearer ' + session.access_token }
+   });
+   const data = await res.json().catch(() => ({}));
+   if (!res.ok) { setMessage(data.error || 'Could not load work order.'); return; }
+   const order = data.workOrder;
+   const allowed = stages.indexOf(order.status);
+   if (allowed >= 0) setStage(order.status);
+   setMessage('Work order loaded from Property Vision.');
+  })();
+ }, []);
+
 
  async function persistAssignment(next:string){
   setAssignmentStatus(next); setMessage('Saving provider assignment...');
