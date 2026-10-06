@@ -28,8 +28,16 @@ function db() {
   return url && key ? createClient(url, key, { auth: { persistSession: false } }) : null;
 }
 
+const MAX_BODY_BYTES = 12000;
+
 export async function POST(request: Request) {
-  const body = await request.json().catch(() => null) as EnquiryInput | null;
+  const rawBody = await request.arrayBuffer();
+  if (rawBody.byteLength > MAX_BODY_BYTES) {
+    return NextResponse.json({ error: 'Request body is too large.' }, { status: 413 });
+  }
+  const body = (() => {
+    try { return JSON.parse(new TextDecoder().decode(rawBody)); } catch { return null; }
+  })() as EnquiryInput | null;
   if (!body || typeof body !== 'object') {
     return NextResponse.json({ error: 'Invalid request body.' }, { status: 400 });
   }
@@ -77,6 +85,14 @@ export async function POST(request: Request) {
     if (!configuration) return NextResponse.json({ error: 'Configuration not found.' }, { status: 400 });
     if (unitId && configuration.unit_id !== unitId) {
       return NextResponse.json({ error: 'Configuration does not belong to the selected unit.' }, { status: 400 });
+    }
+    if (projectId && configuration.unit_id) {
+      const { data: configurationUnit, error: configurationUnitError } = await client
+        .from('property_units').select('id,project_id').eq('id', configuration.unit_id).maybeSingle();
+      if (configurationUnitError) return NextResponse.json({ error: 'Unable to validate configuration project.' }, { status: 500 });
+      if (!configurationUnit || configurationUnit.project_id !== projectId) {
+        return NextResponse.json({ error: 'Configuration does not belong to the selected project.' }, { status: 400 });
+      }
     }
   }
 
