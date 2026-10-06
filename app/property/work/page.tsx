@@ -63,7 +63,8 @@ export default function PropertyWorkPage() {
       });
       const data=await response.json().catch(()=>({}));
       if(!response.ok) throw new Error(data.error || 'Unable to create the work request.');
-      setMessage('Work request created. Work order: ' + data.workOrder.id);
+      setMessage('Work request created. Opening execution…');
+      window.location.href = '/property/execution?workOrderId=' + encodeURIComponent(data.workOrder.id);
     } catch (e) {
       setMessage(e instanceof Error ? e.message : 'Unable to create the work request.');
     } finally { setSaving(false); }
