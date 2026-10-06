@@ -12,7 +12,7 @@ export default function Home() {
           <p className="eyebrow">PROPERTY EXPERIENCE INFRASTRUCTURE</p>
           <h1>Experience Property Before It Exists.</h1>
           <p className="lead">Design, plan, build, buy, sell, rent, configure, renovate, repair, maintain and upgrade property through one connected platform.</p>
-          <div><a className="button" href="/services">Explore Property Services</a> <a className="button" href="/projects/aurelia-residences">Explore Aurelia Residences</a></div>
+          <div><a className="button" href="/services">Explore Property Services</a> <a className="button" href="/start">Start a Property Journey</a> <a className="button" href="/projects/aurelia-residences">Explore Aurelia Residences</a></div>
         </div>
       </section>
       <section>
