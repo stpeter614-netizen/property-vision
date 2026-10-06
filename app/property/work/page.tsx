@@ -14,24 +14,56 @@ export default function PropertyWorkPage() {
   const [description,setDescription]=useState('');
   const [items,setItems]=useState<string[]>([]);
   const [item,setItem]=useState('');
+  const [saving,setSaving]=useState(false);
+  const [message,setMessage]=useState('');
+  const [propertyRecordId,setPropertyRecordId]=useState('');
+  
+  useMemo(() => {
+    if (typeof window !== 'undefined') {
+      setPropertyRecordId(new URLSearchParams(window.location.search).get('propertyRecordId') || '');
+    }
+  }, []);
 
   const summary=useMemo(()=>({title,type,urgency,location,budget,description,items}),[title,type,urgency,location,budget,description,items]);
 
-  function addItem(){
-    if(!item.trim()) return;
-    setItems(current=>[...current,item.trim()]);
-    setItem('');
+  function addItem(){ if(!item.trim()) return; setItems(current=>[...current,item.trim()]); setItem(''); }
+
+  async function submit() {
+    setMessage('');
+    if (!propertyRecordId) { setMessage('Start with a saved property before creating a work request.'); return; }
+    if (!title.trim()) { setMessage('Enter a work title.'); return; }
+    setSaving(true);
+    try {
+      const numericBudget = budget.replace(/[^0-9.]/g,'');
+      const budgetCents = numericBudget ? Math.round(Number(numericBudget) * 100) : null;
+      if (budgetCents !== null && !Number.isFinite(budgetCents)) throw new Error('Enter a valid budget.');
+      const response = await fetch('/api/property/work', {
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({
+          propertyRecordId,
+          title:title.trim(),
+          workType:type,
+          urgency,
+          location:location.trim(),
+          description:description.trim(),
+          budgetCents,
+          items:items.map(description=>({description}))
+        })
+      });
+      const data=await response.json().catch(()=>({}));
+      if(!response.ok) throw new Error(data.error || 'Unable to create the work request.');
+      setMessage('Work request created. Work order: ' + data.workOrder.id);
+    } catch (e) {
+      setMessage(e instanceof Error ? e.message : 'Unable to create the work request.');
+    } finally { setSaving(false); }
   }
 
   return (
     <main className="shell">
       <nav className="nav"><a href="/">PROPERTY VISION</a><span>Property work</span></nav>
       <section className="hero">
-        <div>
-          <p className="eyebrow">RENOVATE · REPAIR · MAINTAIN · UPGRADE</p>
-          <h1>Describe the work. Property Vision structures the job.</h1>
-          <p className="lead">Create a clear work request with the property area, urgency, scope items and budget. This becomes the foundation for quotes, scheduling and project tracking.</p>
-        </div>
+        <div><p className="eyebrow">RENOVATE · REPAIR · MAINTAIN · UPGRADE</p><h1>Describe the work. Property Vision structures the job.</h1><p className="lead">Create a clear work request with the property area, urgency, scope items and budget. This becomes the foundation for quotes, scheduling and project tracking.</p></div>
       </section>
       <section className="grid">
         <label className="card">Work title<input value={title} onChange={e=>setTitle(e.target.value)} placeholder="e.g. Renovate kitchen" /></label>
@@ -49,7 +81,8 @@ export default function PropertyWorkPage() {
       <section>
         <p className="eyebrow">WORK SUMMARY</p>
         <div className="option"><strong>{summary.title || 'Untitled work'}</strong><span>{summary.type} · {summary.urgency}</span><span>{summary.location || 'Property area not specified'}</span><span>{summary.items.length} scope item(s) · {summary.budget || 'Budget not specified'}</span></div>
-        <a className="button" href="/services">Find the required property service →</a>
+        {message && <p role="status">{message}</p>}
+        <button className="button" type="button" onClick={submit} disabled={saving}>{saving ? 'Creating work request…' : 'Create work request →'}</button>
       </section>
     </main>
   );
