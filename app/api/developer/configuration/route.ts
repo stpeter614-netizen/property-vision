@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
 function dbFromRequest(request: Request) {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
@@ -14,7 +16,7 @@ function dbFromRequest(request: Request) {
 
 export async function GET(request: Request) {
   const id = new URL(request.url).searchParams.get('id');
-  if (!id) return NextResponse.json({ error: 'Configuration id is required.' }, { status: 400 });
+  if (!id || !UUID_RE.test(id)) return NextResponse.json({ error: 'Valid configuration id is required.' }, { status: 400 });
 
   const client = dbFromRequest(request);
   if (!client) return NextResponse.json({ error: 'Authentication required.' }, { status: 401 });
@@ -24,6 +26,6 @@ export async function GET(request: Request) {
   const { data, error } = await client.from('property_configurations')
     .select('id,unit_id,base_price_cents,final_price_cents,options,status,created_at,updated_at')
     .eq('id', id).maybeSingle();
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  if (error) return NextResponse.json({ error: 'Unable to load configuration.' }, { status: 500 });
   return NextResponse.json({ configuration: data, connected: true });
 }
