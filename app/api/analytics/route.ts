@@ -10,11 +10,13 @@ function optionalUuid(value: unknown) {
 const MAX_BODY_BYTES = 12000;
 
 export async function POST(request: Request) {
-  const contentLength = Number(request.headers.get('content-length') || 0);
-  if (Number.isFinite(contentLength) && contentLength > MAX_BODY_BYTES) {
+  const rawBody = await request.arrayBuffer();
+  if (rawBody.byteLength > MAX_BODY_BYTES) {
     return NextResponse.json({ error: 'Request body is too large.' }, { status: 413 });
   }
-  const body = await request.json().catch(() => null);
+  const body = (() => {
+    try { return JSON.parse(new TextDecoder().decode(rawBody)); } catch { return null; }
+  })();
   if (!body || typeof body !== 'object') {
     return NextResponse.json({ error: 'Invalid request body.' }, { status: 400 });
   }
