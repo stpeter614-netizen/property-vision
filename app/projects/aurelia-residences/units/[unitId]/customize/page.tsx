@@ -57,8 +57,6 @@ export default function Customize({ params }: Props) {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          unitId,
-          configurationId: configuration.id,
           buyerName: name.trim(),
           buyerContact: contact.trim(),
           message: 'Buyer enquiry for Unit ' + unitId + ' at $' + configuration.total.toLocaleString(),
