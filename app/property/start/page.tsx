@@ -1,9 +1,16 @@
 'use client';
 
 import { useMemo, useState } from 'react';
+import { createClient } from '@supabase/supabase-js';
 
 const types = ['House','Apartment','Villa','Bungalow','Townhouse','Commercial','Office','Retail','Industrial','Land','Other'];
 const stages = ['Design','Planning','Construction','Sale','Rent','Purchase','Configuration','Renovation','Repair','Maintenance','Upgrade','Handover','Resale'];
+
+function authClient() {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  return url && key ? createClient(url, key, { auth: { persistSession: true, autoRefreshToken: true } }) : null;
+}
 
 export default function PropertyStart() {
   const [type,setType]=useState('House');
@@ -27,9 +34,12 @@ export default function PropertyStart() {
     if (!trimmed) { setError('Enter a property name to continue.'); return; }
     setSaving(true);
     try {
+      const client = authClient();
+      const session = (await client?.auth.getSession())?.data.session;
+      if (!session) throw new Error('Sign in to Property Vision before saving a property.');
       const response = await fetch('/api/property/start', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + session.access_token },
         body: JSON.stringify({ name: trimmed, type, stage })
       });
       const data = await response.json().catch(() => ({}));
