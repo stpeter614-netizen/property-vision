@@ -55,7 +55,7 @@ export default function DeveloperWorkOrders() {
               <p><strong>Type:</strong> {item.work_type}</p>
               {item.budget_cents != null && <p><strong>Budget:</strong> {new Intl.NumberFormat('en-KE', { style: 'currency', currency: 'KES' }).format(item.budget_cents / 100)}</p>}
               <p><small>{new Date(item.requested_at || item.created_at).toLocaleString()}</small></p>
-              <a className="button" href={'/property/execution?workOrderId=' + item.id}>Open execution →</a>
+              <div className="actions"><a className="button" href={'/property/estimate?workOrderId=' + item.id}>Build quote →</a><a className="button secondary" href={'/property/execution?workOrderId=' + item.id}>Open execution →</a></div>
             </article>
           ))}</div>}
         <div className="actions" aria-label="Work order pages">
