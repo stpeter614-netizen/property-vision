@@ -23,8 +23,20 @@ export default function EstimatePage(){
  const [other,setOther]=useState(0);
  const [saving,setSaving]=useState(false);
  const [message,setMessage]=useState('');
+ const [designLinks,setDesignLinks]=useState<Array<{id:string;render?:{render_type:string;status:string;image_url?:string|null}|null}>>([]);
 
- useEffect(()=>{setWorkOrderId(new URLSearchParams(window.location.search).get('workOrderId')||'');},[]);
+ useEffect(()=>{
+  const id=new URLSearchParams(window.location.search).get('workOrderId')||'';
+  setWorkOrderId(id);
+  if(!id)return;
+  (async()=>{
+   const client=authClient(); const session=(await client?.auth.getSession())?.data.session;
+   if(!session)return;
+   const response=await fetch('/api/property/work?id='+encodeURIComponent(id),{headers:{Authorization:'Bearer '+session.access_token}});
+   const data=await response.json().catch(()=>({}));
+   if(response.ok)setDesignLinks(data.designLinks||[]);
+  })();
+ },[]);
  const subtotal=useMemo(()=>lines.reduce((n,l)=>n+l.quantity*l.unitPrice,0),[lines]);
  const total=subtotal+labour+other;
 
@@ -62,6 +74,15 @@ export default function EstimatePage(){
  return <main className="shell">
   <nav className="nav"><a href="/developer/work-orders">← Work Orders</a><span>Quote</span></nav>
   <section className="hero"><div><p className="eyebrow">WORK ORDER → QUOTE</p><h1>Build the quote from the actual job.</h1><p className="lead">Use materials, labour and other costs. The quote is saved against the work order and can move to customer approval.</p></div></section>
+  {designLinks.length>0 && <section className="card">
+   <strong>Approved design reference</strong>
+   <p>Build this quote against the customer's approved design.</p>
+   <div className="grid">{designLinks.map(link=>link.render&&<div className="card" key={link.id}>
+    <strong>{link.render.render_type.replaceAll('_',' ')}</strong>
+    <span>Status: {link.render.status}</span>
+    {link.render.image_url&&<img src={link.render.image_url} alt="Approved property design" style={{width:'100%',marginTop:12,borderRadius:12}}/>}
+   </div>)}</div>
+  </section>}
   <section className="card"><strong>Work-order ID</strong><input value={workOrderId} onChange={e=>setWorkOrderId(e.target.value)} placeholder="Work-order UUID"/></section>
   <section className="grid">
    <label className="card">Description<input value={description} onChange={e=>setDescription(e.target.value)} placeholder="e.g. Toilet pan and fittings"/></label>
