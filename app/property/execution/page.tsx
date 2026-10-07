@@ -20,6 +20,8 @@ export default function ExecutionPage(){
  const [providerId,setProviderId]=useState('');
  const [assignments,setAssignments]=useState<Array<{id:string;provider_id:string;status:string;scheduled_at?:string|null}>>([]);
  const [provider,setProvider]=useState('');
+ const [matches,setMatches]=useState<Array<{id:string;name:string;provider_type:string;specialties:string[];service_area?:string|null;matchScore:number}>>([]);
+ const [matching,setMatching]=useState(false);
  const [estimate,setEstimate]=useState('');
  const [designLinks,setDesignLinks]=useState<Array<{id:string;render?:{id:string;render_type:string;status:string;image_url?:string|null}|null}>>([]);
  const i=Math.max(0,stages.indexOf(stage));
@@ -47,6 +49,19 @@ export default function ExecutionPage(){
   })();
  }, []);
 
+
+ async function findMatches(){
+  if(!workOrderId){setMessage('Load a work order first.');return;}
+  setMatching(true); setMessage('Finding suitable providers…');
+  const client=authClient(); const session=(await client?.auth.getSession())?.data.session;
+  if(!session){setMatching(false);setMessage('Sign in to Property Vision to find providers.');return;}
+  const res=await fetch('/api/developer/provider-matches?workOrderId='+encodeURIComponent(workOrderId),{headers:{Authorization:'Bearer '+session.access_token}});
+  const data=await res.json().catch(()=>({}));
+  setMatching(false);
+  if(!res.ok){setMessage(data.error||'Unable to find providers.');return;}
+  setMatches(Array.isArray(data.providers)?data.providers:[]);
+  setMessage((data.providers?.length||0)+' matching providers found.');
+ }
 
  async function createAssignment(){
   setMessage('Creating provider assignment…');
@@ -104,9 +119,17 @@ export default function ExecutionPage(){
    </div>)}</div>
   </section>}
 
+  <section className="card"><strong>Find a provider</strong>
+   <p>Property Vision now matches active providers against the work type, request title and service area.</p>
+   <button className="button" type="button" onClick={findMatches} disabled={matching}>{matching?'Finding providers…':'Find matching providers →'}</button>
+   {matches.length>0 && <div style={{marginTop:16}}>{matches.map(p=><div className="option" key={p.id}>
+    <div><strong>{p.name}</strong><span>{p.provider_type} · {p.service_area||'Service area not specified'}</span><span>{p.specialties?.join(', ')||'General provider'} · Match {p.matchScore}</span></div>
+    <button className="button secondary" type="button" onClick={()=>{setProviderId(p.id);setProvider(p.name);setMessage(p.name+' selected.');}}>Select</button>
+   </div>)}</div>}
+  </section>
   <section className="card"><strong>Provider assignment</strong>
-   <p>Current: {assignmentStatus.replace('_',' ')}</p>
-   <div className="grid"><label className="card">Provider ID<input value={providerId} onChange={e=>setProviderId(e.target.value)} placeholder="Provider UUID"/></label><button className="button" type="button" onClick={createAssignment}>Create assignment →</button></div>
+   <p>Current: {assignmentStatus.replace('_',' ')}{provider ? ' · '+provider : ''}</p>
+   <div className="grid"><label className="card">Provider ID<input value={providerId} onChange={e=>setProviderId(e.target.value)} placeholder="Select a matched provider"/></label><button className="button" type="button" onClick={createAssignment}>Create assignment →</button></div>
    {assignments.length>0 && <div>{assignments.map(a=><div className="option" key={a.id}><strong>{a.status.replace('_',' ')}</strong><span>{a.provider_id}</span></div>)}</div>}
 <div className="progress">{['proposed','accepted','scheduled','in_progress','completed'].map(s=><button key={s} className={assignmentStatus===s?'button':'button secondary'} type="button" onClick={()=>persistAssignment(s)}>{s.replace('_',' ')}</button>)}</div></section>
   <section className="card"><strong>Persistence</strong><p>{message}</p></section>
