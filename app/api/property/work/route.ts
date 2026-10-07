@@ -28,7 +28,25 @@ export async function GET(request: Request) {
   const { data, error } = await client.from('property_work_orders').select('id,property_record_id,title,work_type,urgency,location,description,budget_cents,status,requested_at').eq('id', id).maybeSingle();
   if (error) return NextResponse.json({ error: 'Unable to load the work order.' }, { status: 500 });
   if (!data) return NextResponse.json({ error: 'Work order not found.' }, { status: 404 });
-  return NextResponse.json({ workOrder: data, connected: true });
+
+  const { data: designLinks } = await client.from('property_work_order_design_links')
+    .select('id,design_brief_id,render_request_id,created_at')
+    .eq('work_order_id', id)
+    .order('created_at', { ascending: false })
+    .limit(10);
+
+  const linksWithRenders = await Promise.all((designLinks || []).map(async (link: any) => {
+    const { data: render } = await client.from('property_render_requests')
+      .select('id,render_type,status,image_path,approved_at')
+      .eq('id', link.render_request_id)
+      .maybeSingle();
+    if (!render) return { ...link, render: null };
+    if (!render.image_path) return { ...link, render };
+    const { data: signed } = await client.storage.from('property-renders').createSignedUrl(render.image_path, 60 * 60);
+    return { ...link, render: { ...render, image_url: signed?.signedUrl || null } };
+  }));
+
+  return NextResponse.json({ workOrder: data, designLinks: linksWithRenders, connected: true });
 }
 
 export async function POST(request: Request) {
