@@ -19,6 +19,7 @@ export default function ExecutionPage(){
  const [assignmentStatus,setAssignmentStatus]=useState('proposed');
  const [provider,setProvider]=useState('');
  const [estimate,setEstimate]=useState('');
+ const [designLinks,setDesignLinks]=useState<Array<{id:string;render?:{id:string;render_type:string;status:string;image_url?:string|null}|null}>>([]);
  const i=Math.max(0,stages.indexOf(stage));
  useEffect(() => {
   const id = new URLSearchParams(window.location.search).get('workOrderId');
@@ -34,6 +35,7 @@ export default function ExecutionPage(){
    const data = await res.json().catch(() => ({}));
    if (!res.ok) { setMessage(data.error || 'Could not load work order.'); return; }
    const order = data.workOrder;
+   setDesignLinks(data.designLinks || []);
    const allowed = stages.indexOf(order.status);
    if (allowed >= 0) setStage(order.status);
    setMessage('Work order loaded from Property Vision.');
@@ -75,6 +77,16 @@ export default function ExecutionPage(){
    <label className="card">Estimate<input value={estimate} onChange={e=>setEstimate(e.target.value)} placeholder="e.g. KES 485,000"/></label>
    <label className="card">Assigned provider<input value={provider} onChange={e=>setProvider(e.target.value)} placeholder="Provider / contractor"/></label>
   </section>
+  {designLinks.length > 0 && <section className="card">
+   <strong>Approved design reference</strong>
+   <p>This work request is connected to the approved design used to start the project.</p>
+   <div className="grid">{designLinks.map(link => link.render && <div className="card" key={link.id}>
+    <strong>{link.render.render_type.replaceAll('_',' ')}</strong>
+    <span>Status: {link.render.status}</span>
+    {link.render.image_url && <img src={link.render.image_url} alt="Approved property design render" style={{width:'100%',marginTop:12,borderRadius:12}} />}
+   </div>)}</div>
+  </section>}
+
   <section className="card"><strong>Provider assignment</strong><p>Current: {assignmentStatus.replace('_',' ')}</p><div className="progress">{['proposed','accepted','scheduled','in_progress','completed'].map(s=><button key={s} className={assignmentStatus===s?'button':'button secondary'} type="button" onClick={()=>persistAssignment(s)}>{s.replace('_',' ')}</button>)}</div></section>
   <section className="card"><strong>Persistence</strong><p>{message}</p></section>
   <section className="card"><strong>Current status</strong><h2>{stage.replace('_',' ')}</h2><p>Next: {stage==='requested'?'prepare estimate':stage==='quoted'?'review and approve estimate':stage==='approved'?'assign and schedule':stage==='scheduled'?'start work':stage==='in_progress'?'record completion':'workflow complete'}.</p>{(stage==='quoted'||stage==='approved'||stage==='completed')&&workOrderId?<p><a className="button" href={'/property/quote?workOrderId='+encodeURIComponent(workOrderId)}>Review quote</a></p>:null}</section>
