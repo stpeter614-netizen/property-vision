@@ -77,6 +77,6 @@ export default function ExecutionPage(){
   </section>
   <section className="card"><strong>Provider assignment</strong><p>Current: {assignmentStatus.replace('_',' ')}</p><div className="progress">{['proposed','accepted','scheduled','in_progress','completed'].map(s=><button key={s} className={assignmentStatus===s?'button':'button secondary'} type="button" onClick={()=>persistAssignment(s)}>{s.replace('_',' ')}</button>)}</div></section>
   <section className="card"><strong>Persistence</strong><p>{message}</p></section>
-  <section className="card"><strong>Current status</strong><h2>{stage.replace('_',' ')}</h2><p>Next: {stage==='requested'?'prepare estimate':stage==='quoted'?'approve estimate':stage==='approved'?'assign and schedule':stage==='scheduled'?'start work':stage==='in_progress'?'record completion':'workflow complete'}.</p></section>
+  <section className="card"><strong>Current status</strong><h2>{stage.replace('_',' ')}</h2><p>Next: {stage==='requested'?'prepare estimate':stage==='quoted'?'review and approve estimate':stage==='approved'?'assign and schedule':stage==='scheduled'?'start work':stage==='in_progress'?'record completion':'workflow complete'}.</p>{(stage==='quoted'||stage==='approved'||stage==='completed')&&workOrderId?<p><a className="button" href={'/property/quote?workOrderId='+encodeURIComponent(workOrderId)}>Review quote</a></p>:null}</section>
  </main>;
 }
