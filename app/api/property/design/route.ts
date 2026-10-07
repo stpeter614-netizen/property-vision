@@ -14,6 +14,8 @@ function dbFromRequest(request: Request) {
 
 const uuid = (value: unknown) => typeof value === 'string' && /^[0-9a-fA-F-]{36}$/.test(value.trim());
 
+export const maxDuration = 60;
+
 export async function GET(request: Request) {
   const client = dbFromRequest(request);
   if (!client) return NextResponse.json({ error: 'Authentication required.' }, { status: 401 });
@@ -27,7 +29,7 @@ export async function GET(request: Request) {
   if (briefError) return NextResponse.json({ error: 'Unable to load the design brief.' }, { status: 500 });
 
   const { data: renders, error: renderError } = await client.from('property_render_requests')
-    .select('id,render_type,prompt,status,image_url,error_message,created_at,updated_at')
+    .select('id,render_type,prompt,status,image_url,image_path,error_message,created_at,updated_at')
     .eq('property_record_id', propertyRecordId).order('created_at', { ascending: false }).limit(20);
   if (renderError) return NextResponse.json({ error: 'Unable to load render requests.' }, { status: 500 });
   return NextResponse.json({ brief, renders: renders || [] });
@@ -81,6 +83,52 @@ export async function POST(request: Request) {
     const { data: brief, error } = await query.select('*').single();
     if (error || !brief) return NextResponse.json({ error: 'Unable to save the design brief.' }, { status: 500 });
     return NextResponse.json({ brief });
+  }
+
+  if (action === 'generate_render') {
+    const renderId = typeof input.renderId === 'string' ? input.renderId.trim() : '';
+    if (!uuid(renderId)) return NextResponse.json({ error: 'Invalid render request.' }, { status: 400 });
+    if (!process.env.OPENAI_API_KEY) return NextResponse.json({ error: 'Render engine is not configured.' }, { status: 503 });
+
+    const { data: render, error: renderError } = await client.from('property_render_requests')
+      .select('id,property_record_id,owner_user_id,render_type,prompt,status')
+      .eq('id', renderId).eq('property_record_id', propertyRecordId).maybeSingle();
+    if (renderError || !render) return NextResponse.json({ error: 'Render request not found.' }, { status: 404 });
+    if (render.status === 'ready' && render.image_path) return NextResponse.json({ render });
+
+    await client.from('property_render_requests').update({ status: 'processing', error_message: null, updated_at: new Date().toISOString() }).eq('id', render.id);
+
+    try {
+      const response = await fetch('https://api.openai.com/v1/responses', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + process.env.OPENAI_API_KEY },
+        body: JSON.stringify({
+          model: 'gpt-5.6-luna',
+          input: render.prompt,
+          tools: [{ type: 'image_generation', model: 'gpt-image-2', size: '1536x1024', quality: 'high', output_format: 'png' }]
+        })
+      });
+      const payload = await response.json().catch(() => null);
+      if (!response.ok) throw new Error(payload?.error?.message || 'Image generation failed.');
+      const imageCall = Array.isArray(payload?.output) ? payload.output.find((item: any) => item?.type === 'image_generation_call' && item?.result) : null;
+      if (!imageCall?.result) throw new Error('Render engine returned no image.');
+
+      const bytes = Buffer.from(imageCall.result, 'base64');
+      const path = userData.user.id + '/' + render.property_record_id + '/' + render.id + '.png';
+      const upload = await client.storage.from('property-renders').upload(path, bytes, { contentType: 'image/png', upsert: true });
+      if (upload.error) throw new Error('Unable to store generated render.');
+
+      const { data: saved, error: saveError } = await client.from('property_render_requests')
+        .update({ status: 'ready', image_path: path, updated_at: new Date().toISOString() })
+        .eq('id', render.id).select('id,render_type,prompt,status,image_path,created_at,updated_at').single();
+      if (saveError || !saved) throw new Error('Unable to save generated render.');
+      const { data: signed } = await client.storage.from('property-renders').createSignedUrl(path, 60 * 60);
+      return NextResponse.json({ render: { ...saved, image_url: signed?.signedUrl || null } });
+    } catch (error) {
+      const message = error instanceof Error ? error.message.slice(0, 500) : 'Render generation failed.';
+      await client.from('property_render_requests').update({ status: 'failed', error_message: message, updated_at: new Date().toISOString() }).eq('id', render.id);
+      return NextResponse.json({ error: message }, { status: 502 });
+    }
   }
 
   if (action === 'request_render') {
