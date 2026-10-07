@@ -92,6 +92,18 @@ export default function HouseDesignPage() {
     } catch(e) { setMessage(e instanceof Error ? e.message : 'Unable to review render.'); } finally { setSaving(false); }
   }
 
+  async function createWorkOrderFromRender(id:string) {
+    setMessage('Creating project work request…');
+    setSaving(true);
+    try {
+      const client=authClient(); const session=(await client?.auth.getSession())?.data.session;
+      if(!session) throw new Error('Sign in to create the project work request.');
+      const res=await fetch('/api/property/design',{method:'POST',headers:{'Content-Type':'application/json',Authorization:'Bearer '+session.access_token},body:JSON.stringify({action:'create_work_order_from_render',propertyRecordId,renderId:id})});
+      const data=await res.json().catch(()=>({})); if(!res.ok) throw new Error(data.error || 'Unable to create the work request.');
+      window.location.href='/property/execution?workOrderId='+encodeURIComponent(data.workOrder.id);
+    } catch(e) { setMessage(e instanceof Error ? e.message : 'Unable to create the work request.'); setSaving(false); }
+  }
+
   async function requestRender() {
     setMessage(''); setSaving(true);
     try {
@@ -163,7 +175,10 @@ export default function HouseDesignPage() {
             <button className="button" type="button" onClick={()=>reviewRender(r.id,'approved')} disabled={saving}>Approve render</button>
             <button className="button" type="button" onClick={()=>reviewRender(r.id,'rejected')} disabled={saving}>Reject</button>
           </div>}
-          {r.status === 'approved' && <p role="status">✓ Approved design reference</p>}
+          {r.status === 'approved' && <div style={{display:'grid',gap:8,marginTop:12}}>
+            <p role="status">✓ Approved design reference</p>
+            <button className="button" type="button" onClick={()=>createWorkOrderFromRender(r.id)} disabled={saving}>Create project work request →</button>
+          </div>}
           {r.status === 'requested' && <button className="button" type="button" onClick={()=>generateRender(r.id)} disabled={saving}>Generate render →</button>}
         </div>)}</div>
       </section>
