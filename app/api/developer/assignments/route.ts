@@ -27,3 +27,14 @@ export async function GET(request:Request){
  if(error)return NextResponse.json({error:'Unable to load assignments.'},{status:400});
  return NextResponse.json({assignments:data||[],connected:true});
 }
+export async function PATCH(request:Request){
+ const client=db(request); if(!client)return NextResponse.json({error:'Authentication required.'},{status:401});
+ const {data:u}=await client.auth.getUser(); if(!u.user)return NextResponse.json({error:'Authentication required.'},{status:401});
+ let body:any; try{body=await request.json();}catch{return NextResponse.json({error:'Invalid request.'},{status:400});}
+ const id=String(body.assignmentId||''); const scheduledAt=String(body.scheduledAt||'');
+ if(!UUID.test(id))return NextResponse.json({error:'Valid assignment ID is required.'},{status:400});
+ const date=new Date(scheduledAt); if(!scheduledAt||Number.isNaN(date.getTime()))return NextResponse.json({error:'Valid scheduled date/time is required.'},{status:400});
+ const {data:assignment,error}=await client.from('property_work_order_assignments').update({status:'scheduled',scheduled_at:date.toISOString(),updated_at:new Date().toISOString()}).eq('id',id).select('id,work_order_id,provider_id,status,scheduled_at,completed_at,created_at,updated_at').single();
+ if(error||!assignment)return NextResponse.json({error:'Unable to schedule assignment.'},{status:400});
+ return NextResponse.json({assignment});
+}
