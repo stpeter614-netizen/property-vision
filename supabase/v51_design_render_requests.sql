@@ -84,3 +84,27 @@ with check (
       and r.developer_id is null
   )
 );
+
+
+alter table property_render_requests
+  add column if not exists image_path text;
+
+insert into storage.buckets (id, name, public)
+values ('property-renders', 'property-renders', false)
+on conflict (id) do nothing;
+
+drop policy if exists property_renders_owner_read on storage.objects;
+create policy property_renders_owner_read on storage.objects
+for select to authenticated
+using (
+  bucket_id = 'property-renders'
+  and (storage.foldername(name))[1] = auth.uid()::text
+);
+
+drop policy if exists property_renders_owner_insert on storage.objects;
+create policy property_renders_owner_insert on storage.objects
+for insert to authenticated
+with check (
+  bucket_id = 'property-renders'
+  and (storage.foldername(name))[1] = auth.uid()::text
+);
