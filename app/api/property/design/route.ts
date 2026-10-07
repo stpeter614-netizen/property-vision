@@ -136,7 +136,7 @@ export async function POST(request: Request) {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + process.env.OPENAI_API_KEY },
         body: JSON.stringify({
-          model: 'gpt-5.6-luna',
+          model: 'gpt-6-luna',
           input: render.prompt,
           tools: [{ type: 'image_generation', model: 'gpt-image-2', size: '1536x1024', quality: 'high', output_format: 'png' }]
         })
