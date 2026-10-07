@@ -1,10 +1,17 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
+import { createClient } from '@supabase/supabase-js';
 
 const styles = ['Modern','Contemporary','Traditional','Minimalist','Bungalow','Villa','Farmhouse'];
 const roofs = ['Flat','Gable','Hip','Pitched','Mixed'];
 const finishes = ['Standard','Premium','Luxury'];
+
+function authClient() {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  return url && key ? createClient(url, key, { auth: { persistSession: true, autoRefreshToken: true } }) : null;
+}
 
 export default function HouseDesignPage() {
   const [plot, setPlot] = useState('50 × 100 ft');
@@ -17,6 +24,60 @@ export default function HouseDesignPage() {
   const [roof, setRoof] = useState('Hip');
   const [finish, setFinish] = useState('Premium');
   const [budget, setBudget] = useState('KES 15,000,000');
+  const [propertyRecordId, setPropertyRecordId] = useState('');
+  const [message, setMessage] = useState('');
+  const [saving, setSaving] = useState(false);
+  const [renderType, setRenderType] = useState('exterior');
+  const [renders, setRenders] = useState<Array<{id:string;render_type:string;status:string}>>([]);
+
+  useEffect(() => {
+    const id = new URLSearchParams(window.location.search).get('propertyRecordId') || '';
+    setPropertyRecordId(id);
+    if (!id) return;
+    (async () => {
+      const client = authClient();
+      const session = (await client?.auth.getSession())?.data.session;
+      if (!session) return;
+      const res = await fetch('/api/property/design?propertyRecordId=' + encodeURIComponent(id), { headers: { Authorization: 'Bearer ' + session.access_token } });
+      const data = await res.json().catch(() => ({}));
+      if (res.ok && data.brief) {
+        const b = data.brief;
+        setPlot(b.plot_dimensions || '50 × 100 ft'); setBedrooms(b.bedrooms); setBathrooms(b.bathrooms); setFloors(b.floors);
+        setStyle(b.house_style || 'Modern'); setGarage(b.garage || '2-car garage'); setLayout(b.kitchen_living_layout || 'Open kitchen + living');
+        setRoof(b.roof_style || 'Hip'); setFinish(b.finishes || 'Premium');
+        if (b.budget_cents != null) setBudget('KES ' + (Number(b.budget_cents) / 100).toLocaleString());
+      }
+      if (res.ok) setRenders(data.renders || []);
+    })();
+  }, []);
+
+  async function saveBrief() {
+    setMessage(''); setSaving(true);
+    try {
+      const client = authClient(); const session = (await client?.auth.getSession())?.data.session;
+      if (!session) throw new Error('Sign in to save the design.');
+      const numeric = budget.replace(/[^0-9.]/g,'');
+      const budgetCents = numeric ? Math.round(Number(numeric) * 100) : null;
+      const res = await fetch('/api/property/design', {
+        method:'POST', headers:{'Content-Type':'application/json',Authorization:'Bearer ' + session.access_token},
+        body:JSON.stringify({action:'save_brief',propertyRecordId,plotDimensions:plot,bedrooms,bathrooms,floors,houseStyle:style,garage,kitchenLivingLayout:layout,roofStyle:roof,finishes:finish,budgetCents})
+      });
+      const data=await res.json().catch(()=>({})); if(!res.ok) throw new Error(data.error || 'Unable to save design.');
+      setMessage('Design brief saved.');
+    } catch(e) { setMessage(e instanceof Error ? e.message : 'Unable to save design.'); } finally { setSaving(false); }
+  }
+
+  async function requestRender() {
+    setMessage(''); setSaving(true);
+    try {
+      const client=authClient(); const session=(await client?.auth.getSession())?.data.session;
+      if(!session) throw new Error('Sign in to request a render.');
+      if(!propertyRecordId) throw new Error('Start with a saved property before requesting a render.');
+      const res=await fetch('/api/property/design',{method:'POST',headers:{'Content-Type':'application/json',Authorization:'Bearer '+session.access_token},body:JSON.stringify({action:'request_render',propertyRecordId,renderType})});
+      const data=await res.json().catch(()=>({})); if(!res.ok) throw new Error(data.error || 'Unable to request render.');
+      setRenders(current=>[data.render,...current]); setMessage('Render request created. Rendering can now be processed by the render engine.');
+    } catch(e) { setMessage(e instanceof Error ? e.message : 'Unable to request render.'); } finally { setSaving(false); }
+  }
 
   const summary = useMemo(() => ({ plot, bedrooms, bathrooms, floors, style, garage, layout, roof, finish, budget }), [plot, bedrooms, bathrooms, floors, style, garage, layout, roof, finish, budget]);
 
@@ -51,7 +112,26 @@ export default function HouseDesignPage() {
           <span>{summary.plot} · {summary.style} · {summary.roof} roof · {summary.garage}</span>
           <span>{summary.layout} · {summary.finish} finishes · {summary.budget}</span>
         </div>
-        <div className="option"><strong>Next:</strong><span>Generate the architectural concept, floor layout, exterior/interior visualization, material schedule and budget estimate from this configuration.</span></div>
+        <div className="option"><strong>Next:</strong><span>Save this design brief, then request the exterior, interior, floor-plan, renovation or materials render you want to visualise.</span></div>
+        <div className="option">
+          <button className="button" type="button" onClick={saveBrief} disabled={saving || !propertyRecordId}>{saving ? 'Saving…' : 'Save design brief'}</button>
+        </div>
+      </section>
+
+      <section>
+        <p className="eyebrow">RENDER STUDIO</p>
+        <div className="grid">
+          <label className="card">Render type<select value={renderType} onChange={e=>setRenderType(e.target.value)}>
+            <option value="exterior">Exterior</option>
+            <option value="interior">Interior</option>
+            <option value="floor_plan">Floor plan</option>
+            <option value="renovation_before_after">Renovation before / after</option>
+            <option value="materials">Materials & finishes</option>
+          </select></label>
+          <div className="card"><strong>Property-linked render</strong><p>Each request is attached to this property's saved design brief.</p><button className="button" type="button" onClick={requestRender} disabled={saving || !propertyRecordId}>Request render →</button></div>
+        </div>
+        {message && <p role="status">{message}</p>}
+        <div className="grid">{renders.map(r=><div className="card" key={r.id}><strong>{r.render_type.replaceAll('_',' ')}</strong><span>Status: {r.status}</span></div>)}</div>
       </section>
     </main>
   );
