@@ -10,9 +10,9 @@ function clientFromRequest(request: NextRequest) {
   const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
   if (!url || !key) return null;
 
-  const headers = new Headers();
+  const headers: Record<string, string> = {};
   const authorization = request.headers.get('authorization');
-  if (authorization) headers.set('Authorization', authorization);
+  if (authorization) headers.Authorization = authorization;
   return createClient(url, key, { global: { headers } });
 }
 
