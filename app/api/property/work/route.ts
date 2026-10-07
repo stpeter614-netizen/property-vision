@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 
 const TYPES = new Set(['renovation','repair','maintenance','upgrade','inspection','installation','other']);
+const SPECIFIC_TO_CORE: Record<string,string> = { plumbing:'repair', electrical:'repair', painting:'maintenance', tiling:'renovation', roofing:'repair', waterproofing:'repair', carpentry:'repair', 'bathroom / toilet':'renovation', kitchen:'renovation' };
 const URGENCIES = new Set(['routine','normal','urgent','emergency']);
 const MAX_BODY = 12000;
 
@@ -50,7 +51,8 @@ export async function POST(request: Request) {
 
   const propertyRecordId = typeof input.propertyRecordId === 'string' ? input.propertyRecordId.trim() : '';
   const title = typeof input.title === 'string' ? input.title.trim() : '';
-  const workType = typeof input.workType === 'string' ? input.workType.toLowerCase() : '';
+  const requestedWorkType = typeof input.workType === 'string' ? input.workType.trim().toLowerCase() : '';
+  const workType = SPECIFIC_TO_CORE[requestedWorkType] || requestedWorkType;
   const urgency = typeof input.urgency === 'string' ? input.urgency.toLowerCase() : '';
   const location = typeof input.location === 'string' ? input.location.trim() : '';
   const description = typeof input.description === 'string' ? input.description.trim() : '';
