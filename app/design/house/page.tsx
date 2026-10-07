@@ -28,7 +28,7 @@ export default function HouseDesignPage() {
   const [message, setMessage] = useState('');
   const [saving, setSaving] = useState(false);
   const [renderType, setRenderType] = useState('exterior');
-  const [renders, setRenders] = useState<Array<{id:string;render_type:string;status:string}>>([]);
+  const [renders, setRenders] = useState<Array<{id:string;render_type:string;status:string;image_url?:string|null}>>([]);
 
   useEffect(() => {
     const id = new URLSearchParams(window.location.search).get('propertyRecordId') || '';
@@ -65,6 +65,18 @@ export default function HouseDesignPage() {
       const data=await res.json().catch(()=>({})); if(!res.ok) throw new Error(data.error || 'Unable to save design.');
       setMessage('Design brief saved.');
     } catch(e) { setMessage(e instanceof Error ? e.message : 'Unable to save design.'); } finally { setSaving(false); }
+  }
+
+  async function generateRender(id:string) {
+    setMessage('Generating render…');
+    setSaving(true);
+    try {
+      const client=authClient(); const session=(await client?.auth.getSession())?.data.session;
+      if(!session) throw new Error('Sign in to generate a render.');
+      const res=await fetch('/api/property/design',{method:'POST',headers:{'Content-Type':'application/json',Authorization:'Bearer '+session.access_token},body:JSON.stringify({action:'generate_render',propertyRecordId,renderId:id})});
+      const data=await res.json().catch(()=>({})); if(!res.ok) throw new Error(data.error || 'Render generation failed.');
+      setRenders(current=>current.map(x=>x.id===id?data.render:x)); setMessage('Render generated.');
+    } catch(e) { setMessage(e instanceof Error ? e.message : 'Render generation failed.'); } finally { setSaving(false); }
   }
 
   async function requestRender() {
@@ -131,7 +143,11 @@ export default function HouseDesignPage() {
           <div className="card"><strong>Property-linked render</strong><p>Each request is attached to this property's saved design brief.</p><button className="button" type="button" onClick={requestRender} disabled={saving || !propertyRecordId}>Request render →</button></div>
         </div>
         {message && <p role="status">{message}</p>}
-        <div className="grid">{renders.map(r=><div className="card" key={r.id}><strong>{r.render_type.replaceAll('_',' ')}</strong><span>Status: {r.status}</span></div>)}</div>
+        <div className="grid">{renders.map(r=><div className="card" key={r.id}>
+          <strong>{r.render_type.replaceAll('_',' ')}</strong><span>Status: {r.status}</span>
+          {r.image_url && <img src={r.image_url} alt={r.render_type.replaceAll('_',' ') + ' property render'} style={{width:'100%',marginTop:12,borderRadius:12}} />}
+          {r.status === 'requested' && <button className="button" type="button" onClick={()=>generateRender(r.id)} disabled={saving}>Generate render →</button>}
+        </div>)}</div>
       </section>
     </main>
   );
