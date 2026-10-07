@@ -31,18 +31,52 @@ export default function DeveloperWorkOrders() {
   const [connected, setConnected] = useState(true);
   const [claiming, setClaiming] = useState<string | null>(null);
 
+  async function claim(workOrderId: string) {
+    const client = authClient();
+    if (!client) {
+      setConnected(false);
+      return;
+    }
+    setClaiming(workOrderId);
+    try {
+      const { data: sessionData } = await client.auth.getSession();
+      const token = sessionData.session?.access_token;
+      if (!token) throw new Error('Authentication required.');
+      const response = await fetch('/api/developer/work-orders', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ workOrderId }),
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || 'Unable to claim work order');
+      setItems((current) => current.map((item) => item.id === workOrderId ? { ...item, developer_id: data.workOrder?.developer_id || 'claimed' } : item));
+    } catch {
+      setConnected(false);
+    } finally {
+      setClaiming(null);
+    }
+  }
+
   useEffect(() => {
     setLoading(true);
-    fetch('/api/developer/work-orders?page=' + page + '&pageSize=50')
-      .then(async (response) => {
-        const data = await response.json();
-        if (!response.ok) throw new Error(data.error || 'Unable to load work orders');
-        setItems(data.workOrders || []);
-        setHasMore(data.hasMore === true);
-        setConnected(data.connected !== false);
-      })
-      .catch(() => setConnected(false))
-      .finally(() => setLoading(false));
+    const client = authClient();
+    if (!client) {
+      setConnected(false);
+      setLoading(false);
+      return;
+    }
+    client.auth.getSession().then(({ data }) => {
+      const token = data.session?.access_token;
+      if (!token) throw new Error('Authentication required.');
+      return fetch('/api/developer/work-orders?page=' + page + '&pageSize=50', { headers: { Authorization: `Bearer ${token}` } });
+    }).then(async (response) => {
+      if (!response) return;
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || 'Unable to load work orders');
+      setItems(data.workOrders || []);
+      setHasMore(data.hasMore === true);
+      setConnected(data.connected !== false);
+    }).catch(() => setConnected(false)).finally(() => setLoading(false));
   }, [page]);
 
   return (
