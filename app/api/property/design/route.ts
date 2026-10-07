@@ -164,6 +164,60 @@ export async function POST(request: Request) {
     }
   }
 
+  if (action === 'create_work_order_from_render') {
+    const renderId = typeof input.renderId === 'string' ? input.renderId.trim() : '';
+    if (!uuid(renderId)) return NextResponse.json({ error: 'Invalid render request.' }, { status: 400 });
+
+    const { data: render, error: renderError } = await client.from('property_render_requests')
+      .select('id,property_record_id,design_brief_id,status,owner_user_id,render_type')
+      .eq('id', renderId).eq('property_record_id', propertyRecordId).eq('owner_user_id', userData.user.id).maybeSingle();
+    if (renderError || !render) return NextResponse.json({ error: 'Render request not found.' }, { status: 404 });
+    if (render.status !== 'approved') return NextResponse.json({ error: 'Approve the render before creating the project work request.' }, { status: 409 });
+
+    const { data: brief } = await client.from('property_design_briefs')
+      .select('id,plot_dimensions,bedrooms,bathrooms,floors,house_style,garage,kitchen_living_layout,roof_style,finishes,budget_cents')
+      .eq('id', render.design_brief_id).eq('property_record_id', propertyRecordId).eq('owner_user_id', userData.user.id).maybeSingle();
+    if (!brief) return NextResponse.json({ error: 'Design brief not found.' }, { status: 404 });
+
+    const title = 'Project based on approved ' + render.render_type.replaceAll('_', ' ') + ' design';
+    const description = [
+      'Work request created from an approved Property Vision design.',
+      'Approved render: ' + render.id + '.',
+      'Design brief: ' + brief.id + '.',
+      brief.plot_dimensions ? 'Plot: ' + brief.plot_dimensions + '.' : '',
+      brief.bedrooms + ' bedrooms, ' + brief.bathrooms + ' bathrooms, ' + brief.floors + ' floor(s).',
+      'Style: ' + brief.house_style + '; roof: ' + (brief.roof_style || 'not specified') + '; finishes: ' + (brief.finishes || 'not specified') + '.'
+    ].filter(Boolean).join(' ');
+
+    const { data: order, error: orderError } = await client.from('property_work_orders').insert({
+      property_record_id: propertyRecordId,
+      title: title.slice(0, 160),
+      work_type: 'renovation',
+      urgency: 'normal',
+      location: null,
+      description,
+      budget_cents: brief.budget_cents,
+      status: 'requested',
+      requested_at: new Date().toISOString()
+    }).select('id,property_record_id,title,work_type,urgency,description,budget_cents,status,requested_at').single();
+
+    if (orderError || !order) return NextResponse.json({ error: 'Unable to create the project work request.' }, { status: 500 });
+
+    const { data: link, error: linkError } = await client.from('property_work_order_design_links').insert({
+      work_order_id: order.id,
+      design_brief_id: brief.id,
+      render_request_id: render.id,
+      linked_by: userData.user.id
+    }).select('id,work_order_id,design_brief_id,render_request_id,created_at').single();
+
+    if (linkError || !link) {
+      await client.from('property_work_orders').delete().eq('id', order.id);
+      return NextResponse.json({ error: 'Unable to connect the approved design to the work request.' }, { status: 500 });
+    }
+
+    return NextResponse.json({ workOrder: order, designLink: link, connected: true }, { status: 201 });
+  }
+
   if (action === 'request_render') {
     const types = new Set(['exterior','interior','floor_plan','renovation_before_after','materials']);
     if (typeof input.renderType !== 'string' || !types.has(input.renderType)) return NextResponse.json({ error: 'Invalid render type.' }, { status: 400 });
