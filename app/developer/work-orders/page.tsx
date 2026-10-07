@@ -1,10 +1,12 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { createClient } from '@supabase/supabase-js';
 
 type WorkOrder = {
   id: string;
   property_record_id: string;
+  developer_id: string | null;
   title: string;
   work_type: string;
   urgency: string;
@@ -15,7 +17,11 @@ type WorkOrder = {
   property_records?: { name: string | null; developer_id: string | null } | null;
 };
 
-const statuses = ['requested', 'quoted', 'approved', 'scheduled', 'in_progress', 'completed', 'cancelled'];
+function authClient() {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  return url && key ? createClient(url, key, { auth: { persistSession: true, autoRefreshToken: true } }) : null;
+}
 
 export default function DeveloperWorkOrders() {
   const [items, setItems] = useState<WorkOrder[]>([]);
@@ -23,6 +29,7 @@ export default function DeveloperWorkOrders() {
   const [hasMore, setHasMore] = useState(false);
   const [loading, setLoading] = useState(true);
   const [connected, setConnected] = useState(true);
+  const [claiming, setClaiming] = useState<string | null>(null);
 
   useEffect(() => {
     setLoading(true);
@@ -55,7 +62,7 @@ export default function DeveloperWorkOrders() {
               <p><strong>Type:</strong> {item.work_type}</p>
               {item.budget_cents != null && <p><strong>Budget:</strong> {new Intl.NumberFormat('en-KE', { style: 'currency', currency: 'KES' }).format(item.budget_cents / 100)}</p>}
               <p><small>{new Date(item.requested_at || item.created_at).toLocaleString()}</small></p>
-              <div className="actions"><a className="button" href={'/property/estimate?workOrderId=' + item.id}>Build quote →</a><a className="button secondary" href={'/property/execution?workOrderId=' + item.id}>Open execution →</a></div>
+              <div className="actions">{!item.developer_id && <button className="button" type="button" onClick={() => claim(item.id)} disabled={claiming === item.id}>{claiming === item.id ? 'Claiming…' : 'Claim work order'}</button>}{item.developer_id && <><a className="button" href={'/property/estimate?workOrderId=' + item.id}>Build quote →</a><a className="button secondary" href={'/property/execution?workOrderId=' + item.id}>Open execution →</a></>}</div>
             </article>
           ))}</div>}
         <div className="actions" aria-label="Work order pages">
