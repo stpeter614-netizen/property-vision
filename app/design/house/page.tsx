@@ -28,7 +28,7 @@ export default function HouseDesignPage() {
   const [message, setMessage] = useState('');
   const [saving, setSaving] = useState(false);
   const [renderType, setRenderType] = useState('exterior');
-  const [renders, setRenders] = useState<Array<{id:string;render_type:string;status:string;image_url?:string|null}>>([]);
+  const [renders, setRenders] = useState<Array<{id:string;render_type:string;status:string;image_url?:string|null;approved_at?:string|null}>>([]);
 
   useEffect(() => {
     const id = new URLSearchParams(window.location.search).get('propertyRecordId') || '';
@@ -77,6 +77,19 @@ export default function HouseDesignPage() {
       const data=await res.json().catch(()=>({})); if(!res.ok) throw new Error(data.error || 'Render generation failed.');
       setRenders(current=>current.map(x=>x.id===id?data.render:x)); setMessage('Render generated.');
     } catch(e) { setMessage(e instanceof Error ? e.message : 'Render generation failed.'); } finally { setSaving(false); }
+  }
+
+  async function reviewRender(id:string, decision:'approved'|'rejected') {
+    setMessage('');
+    setSaving(true);
+    try {
+      const client=authClient(); const session=(await client?.auth.getSession())?.data.session;
+      if(!session) throw new Error('Sign in to review the render.');
+      const res=await fetch('/api/property/design',{method:'POST',headers:{'Content-Type':'application/json',Authorization:'Bearer '+session.access_token},body:JSON.stringify({action:'review_render',propertyRecordId,renderId:id,decision})});
+      const data=await res.json().catch(()=>({})); if(!res.ok) throw new Error(data.error || 'Unable to review render.');
+      setRenders(current=>current.map(x=>x.id===id?{...x,...data.render}:x));
+      setMessage(decision==='approved' ? 'Render approved. It can now be used as the design reference for the project.' : 'Render rejected. You can request another render.');
+    } catch(e) { setMessage(e instanceof Error ? e.message : 'Unable to review render.'); } finally { setSaving(false); }
   }
 
   async function requestRender() {
@@ -146,6 +159,11 @@ export default function HouseDesignPage() {
         <div className="grid">{renders.map(r=><div className="card" key={r.id}>
           <strong>{r.render_type.replaceAll('_',' ')}</strong><span>Status: {r.status}</span>
           {r.image_url && <img src={r.image_url} alt={r.render_type.replaceAll('_',' ') + ' property render'} style={{width:'100%',marginTop:12,borderRadius:12}} />}
+          {r.status === 'ready' && <div style={{display:'flex',gap:8,marginTop:12}}>
+            <button className="button" type="button" onClick={()=>reviewRender(r.id,'approved')} disabled={saving}>Approve render</button>
+            <button className="button" type="button" onClick={()=>reviewRender(r.id,'rejected')} disabled={saving}>Reject</button>
+          </div>}
+          {r.status === 'approved' && <p role="status">✓ Approved design reference</p>}
           {r.status === 'requested' && <button className="button" type="button" onClick={()=>generateRender(r.id)} disabled={saving}>Generate render →</button>}
         </div>)}</div>
       </section>
