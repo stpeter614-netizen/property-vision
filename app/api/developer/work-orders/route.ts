@@ -3,6 +3,7 @@ import { createClient } from '@supabase/supabase-js';
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const MAX_PAGE_SIZE = 100;
+const MAX_BODY = 4000;
 
 function clientFromRequest(request: NextRequest) {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -13,6 +14,40 @@ function clientFromRequest(request: NextRequest) {
   const authorization = request.headers.get('authorization');
   if (authorization) headers.set('Authorization', authorization);
   return createClient(url, key, { global: { headers } });
+}
+
+export async function POST(request: NextRequest) {
+  const client = clientFromRequest(request);
+  if (!client) return NextResponse.json({ error: 'Database is not configured.' }, { status: 503 });
+
+  const authorization = request.headers.get('authorization');
+  if (!authorization?.startsWith('Bearer ')) return NextResponse.json({ error: 'Authentication required.' }, { status: 401 });
+
+  const { data: userData, error: authError } = await client.auth.getUser();
+  if (authError || !userData.user) return NextResponse.json({ error: 'Authentication required.' }, { status: 401 });
+
+  const raw = await request.arrayBuffer();
+  if (raw.byteLength > MAX_BODY) return NextResponse.json({ error: 'Request body is too large.' }, { status: 413 });
+
+  let body: unknown;
+  try { body = JSON.parse(new TextDecoder().decode(raw)); }
+  catch { return NextResponse.json({ error: 'Invalid JSON.' }, { status: 400 }); }
+
+  if (!body || typeof body !== 'object' || Array.isArray(body)) {
+    return NextResponse.json({ error: 'Invalid request body.' }, { status: 400 });
+  }
+
+  const workOrderId = (body as Record<string, unknown>).workOrderId;
+  if (typeof workOrderId !== 'string' || !UUID.test(workOrderId)) {
+    return NextResponse.json({ error: 'Valid workOrderId is required.' }, { status: 400 });
+  }
+
+  const { data, error } = await client.rpc('property_claim_work_order', { p_work_order_id: workOrderId });
+  if (error || !data) {
+    return NextResponse.json({ error: error?.message || 'Unable to claim work order.' }, { status: 409 });
+  }
+
+  return NextResponse.json({ workOrder: data, claimed: true, connected: true });
 }
 
 export async function GET(request: NextRequest) {
@@ -43,7 +78,7 @@ export async function GET(request: NextRequest) {
 
   let query = client
     .from('property_work_orders')
-    .select('id,property_record_id,title,work_type,urgency,status,budget_cents,requested_at,scheduled_at,completed_at,created_at,updated_at,property_records!inner(name,developer_id)', { count: 'exact' })
+    .select('id,property_record_id,developer_id,title,work_type,urgency,status,budget_cents,requested_at,scheduled_at,completed_at,created_at,updated_at,property_records!inner(name,developer_id)', { count: 'exact' })
     .order('created_at', { ascending: false });
 
   if (id) {
