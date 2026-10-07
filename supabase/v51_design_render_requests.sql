@@ -108,3 +108,22 @@ with check (
   bucket_id = 'property-renders'
   and (storage.foldername(name))[1] = auth.uid()::text
 );
+
+
+-- Property Vision V52: customer render review and approval.
+alter table property_render_requests
+  add column if not exists approved_at timestamptz,
+  add column if not exists approved_by uuid references auth.users(id) on delete set null;
+
+alter table property_render_requests
+  drop constraint if exists property_render_requests_status_check;
+
+alter table property_render_requests
+  add constraint property_render_requests_status_check
+  check (status in ('requested','processing','ready','failed','approved','rejected'));
+
+drop policy if exists property_render_requests_owner_update on property_render_requests;
+create policy property_render_requests_owner_update on property_render_requests
+for update to authenticated
+using (owner_user_id = auth.uid())
+with check (owner_user_id = auth.uid());
