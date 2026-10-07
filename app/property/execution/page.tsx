@@ -22,6 +22,8 @@ export default function ExecutionPage(){
  const [provider,setProvider]=useState('');
  const [matches,setMatches]=useState<Array<{id:string;name:string;provider_type:string;specialties:string[];service_area?:string|null;matchScore:number}>>([]);
  const [matching,setMatching]=useState(false);
+ const [scheduledAt,setScheduledAt]=useState('');
+ const [scheduling,setScheduling]=useState(false);
  const [estimate,setEstimate]=useState('');
  const [designLinks,setDesignLinks]=useState<Array<{id:string;render?:{id:string;render_type:string;status:string;image_url?:string|null}|null}>>([]);
  const i=Math.max(0,stages.indexOf(stage));
@@ -73,6 +75,19 @@ export default function ExecutionPage(){
   if(!res.ok){setMessage(data.error||'Unable to create provider assignment.');return;}
   setAssignments(x=>[data.assignment,...x]); setAssignmentId(data.assignment.id); setAssignmentStatus(data.assignment.status);
   setMessage('Provider assignment created.');
+ }
+
+ async function scheduleAssignment(){
+  if(!assignmentId){setMessage('Select or create an assignment first.');return;}
+  if(!scheduledAt){setMessage('Choose a date and time first.');return;}
+  const client=authClient(); const session=(await client?.auth.getSession())?.data.session;
+  if(!session){setMessage('Sign in to Property Vision to schedule the provider.');return;}
+  setScheduling(true); setMessage('Scheduling provider…');
+  const res=await fetch('/api/developer/assignments',{method:'PATCH',headers:{'Content-Type':'application/json',Authorization:'Bearer '+session.access_token},body:JSON.stringify({assignmentId,scheduledAt:new Date(scheduledAt).toISOString()})});
+  const data=await res.json().catch(()=>({})); setScheduling(false);
+  if(!res.ok){setMessage(data.error||'Unable to schedule provider.');return;}
+  setAssignmentStatus('scheduled'); setAssignments(x=>x.map(a=>a.id===assignmentId?data.assignment:a));
+  setMessage('Provider scheduled.');
  }
 
  async function persistAssignment(next:string){
@@ -130,7 +145,11 @@ export default function ExecutionPage(){
   <section className="card"><strong>Provider assignment</strong>
    <p>Current: {assignmentStatus.replace('_',' ')}{provider ? ' · '+provider : ''}</p>
    <div className="grid"><label className="card">Provider ID<input value={providerId} onChange={e=>setProviderId(e.target.value)} placeholder="Select a matched provider"/></label><button className="button" type="button" onClick={createAssignment}>Create assignment →</button></div>
-   {assignments.length>0 && <div>{assignments.map(a=><div className="option" key={a.id}><strong>{a.status.replace('_',' ')}</strong><span>{a.provider_id}</span></div>)}</div>}
+   {assignments.length>0 && <div>{assignments.map(a=><div className="option" key={a.id}><strong>{a.status.replace('_',' ')}</strong><span>{a.provider_id}{a.scheduled_at ? ' · '+new Date(a.scheduled_at).toLocaleString() : ''}</span></div>)}</div>}
+   <div className="grid">
+    <label className="card">Schedule date & time<input type="datetime-local" value={scheduledAt} onChange={e=>setScheduledAt(e.target.value)} /></label>
+    <button className="button" type="button" onClick={scheduleAssignment} disabled={scheduling}>{scheduling?'Scheduling…':'Schedule provider →'}</button>
+   </div>
 <div className="progress">{['proposed','accepted','scheduled','in_progress','completed'].map(s=><button key={s} className={assignmentStatus===s?'button':'button secondary'} type="button" onClick={()=>persistAssignment(s)}>{s.replace('_',' ')}</button>)}</div></section>
   <section className="card"><strong>Persistence</strong><p>{message}</p></section>
   <section className="card"><strong>Current status</strong><h2>{stage.replace('_',' ')}</h2><p>Next: {stage==='requested'?'prepare estimate':stage==='quoted'?'review and approve estimate':stage==='approved'?'assign and schedule':stage==='scheduled'?'start work':stage==='in_progress'?'record completion':'workflow complete'}.</p>{(stage==='quoted'||stage==='approved'||stage==='completed')&&workOrderId?<p><a className="button" href={'/property/quote?workOrderId='+encodeURIComponent(workOrderId)}>Review quote</a></p>:null}</section>
