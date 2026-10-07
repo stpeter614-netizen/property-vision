@@ -29,10 +29,15 @@ export async function GET(request: Request) {
   if (briefError) return NextResponse.json({ error: 'Unable to load the design brief.' }, { status: 500 });
 
   const { data: renders, error: renderError } = await client.from('property_render_requests')
-    .select('id,render_type,prompt,status,image_url,image_path,error_message,created_at,updated_at')
+    .select('id,render_type,prompt,status,image_url,image_path,error_message,approved_at,approved_by,created_at,updated_at')
     .eq('property_record_id', propertyRecordId).order('created_at', { ascending: false }).limit(20);
   if (renderError) return NextResponse.json({ error: 'Unable to load render requests.' }, { status: 500 });
-  return NextResponse.json({ brief, renders: renders || [] });
+  const hydrated = await Promise.all((renders || []).map(async (render: any) => {
+    if (!render.image_path) return render;
+    const { data: signed } = await client.storage.from('property-renders').createSignedUrl(render.image_path, 60 * 60);
+    return { ...render, image_url: signed?.signedUrl || null };
+  }));
+  return NextResponse.json({ brief, renders: hydrated });
 }
 
 export async function POST(request: Request) {
@@ -83,6 +88,34 @@ export async function POST(request: Request) {
     const { data: brief, error } = await query.select('*').single();
     if (error || !brief) return NextResponse.json({ error: 'Unable to save the design brief.' }, { status: 500 });
     return NextResponse.json({ brief });
+  }
+
+  if (action === 'review_render') {
+    const renderId = typeof input.renderId === 'string' ? input.renderId.trim() : '';
+    const decision = input.decision;
+    if (!uuid(renderId) || !['approved','rejected'].includes(decision)) {
+      return NextResponse.json({ error: 'Invalid render review.' }, { status: 400 });
+    }
+    const { data: render, error: renderError } = await client.from('property_render_requests')
+      .select('id,status').eq('id', renderId).eq('property_record_id', propertyRecordId).maybeSingle();
+    if (renderError || !render) return NextResponse.json({ error: 'Render request not found.' }, { status: 404 });
+    if (render.status !== 'ready' && render.status !== 'approved' && render.status !== 'rejected') {
+      return NextResponse.json({ error: 'Only a completed render can be reviewed.' }, { status: 409 });
+    }
+    const { data: reviewed, error } = await client.from('property_render_requests')
+      .update({
+        status: decision,
+        approved_at: decision === 'approved' ? new Date().toISOString() : null,
+        approved_by: decision === 'approved' ? userData.user.id : null,
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', renderId).select('id,render_type,status,image_path,approved_at,approved_by,created_at,updated_at').single();
+    if (error || !reviewed) return NextResponse.json({ error: 'Unable to save render review.' }, { status: 500 });
+    if (reviewed.image_path) {
+      const { data: signed } = await client.storage.from('property-renders').createSignedUrl(reviewed.image_path, 60 * 60);
+      return NextResponse.json({ render: { ...reviewed, image_url: signed?.signedUrl || null } });
+    }
+    return NextResponse.json({ render: reviewed });
   }
 
   if (action === 'generate_render') {
