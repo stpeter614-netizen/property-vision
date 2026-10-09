@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 
 const journeys = [
   { id:'design', title:'I want to design a property', steps:['Tell us about the plot','Choose rooms, floors and style','Configure materials and finishes','Generate the design brief','Review with professionals'] },
@@ -18,6 +18,12 @@ const journeys = [
 
 export default function StartPage() {
   const [selected, setSelected] = useState(journeys[0]);
+
+  useEffect(() => {
+    const type = new URLSearchParams(window.location.search).get('type');
+    const matchingJourney = journeys.find(journey => journey.id === type);
+    if (matchingJourney) setSelected(matchingJourney);
+  }, []);
   return (
     <main className="shell">
       <nav className="nav"><a href="/">PROPERTY VISION</a><span>Start a property journey</span></nav>
@@ -41,6 +47,12 @@ export default function StartPage() {
         <p className="eyebrow">SELECTED JOURNEY</p>
         <div className="option"><h2>{selected.title}</h2></div>
         <div className="grid">{selected.steps.map((step,index) => <div className="card" key={step}><p className="eyebrow">STEP {index+1}</p><h3>{step}</h3></div>)}</div>
+        <div className="notice">
+          <h2>Ready to define your project?</h2>
+          <p>Start with the details you know. Measurements, photos and final specifications can be added as the project develops.</p>
+          <a className="button" href={'/services?journey=' + selected.id}>Explore related services</a>{' '}
+          <a className="button" href="/property-actions">Choose another property action</a>
+        </div>
       </section>
     </main>
   );
