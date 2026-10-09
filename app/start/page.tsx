@@ -11,6 +11,9 @@ const journeys = [
   { id:'repair', title:'I need a repair', steps:['Describe the problem','Select the property area','Add photos or information','Request a service','Track the work'] },
   { id:'maintain', title:'I need property maintenance', steps:['Create the property record','Record maintenance needs','Schedule work','Keep service history','Plan preventive maintenance'] },
   { id:'upgrade', title:'I want to upgrade my property', steps:['Select the area','Explore upgrade options','Compare materials/products','See the cost impact','Save the upgrade plan'] },
+  { id:'improve', title:'I want to improve my property', steps:['Choose the area','Select the improvement','Describe the desired result','Estimate scope and materials','Request delivery'] },
+  { id:'estimate', title:'I want a project estimate', steps:['Choose project type','Enter measurements','Select materials and finish level','Calculate an early cost range','Request a professional estimate'] },
+  { id:'professional', title:'I need a professional', steps:['Describe the project','Choose the professional type','Set location and requirements','Review suitable providers','Request a consultation or quote'] },
 ];
 
 export default function StartPage() {
