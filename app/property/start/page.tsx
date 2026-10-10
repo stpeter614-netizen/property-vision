@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { createClient } from '@supabase/supabase-js';
 
 const types = ['House','Apartment','Villa','Bungalow','Townhouse','Commercial','Office','Retail','Industrial','Land','Other'];
@@ -18,6 +18,18 @@ export default function PropertyStart() {
   const [name,setName]=useState('');
   const [saving,setSaving]=useState(false);
   const [error,setError]=useState('');
+  const [actionTitle,setActionTitle]=useState('');
+  const [workType,setWorkType]=useState('Other');
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const requestedStage = params.get('stage');
+    if (requestedStage && stages.includes(requestedStage)) setStage(requestedStage);
+    setActionTitle(params.get('title') || '');
+    const requestedWorkType = params.get('workType');
+    if (requestedWorkType) setWorkType(requestedWorkType);
+  }, []);
+
   const next = useMemo(() => {
     if (stage === 'Design') return 'Configure the property brief, rooms, dimensions, style, finishes and budget.';
     if (stage === 'Renovation') return 'Define the existing property, spaces, work required, materials and budget.';
@@ -47,7 +59,10 @@ export default function PropertyStart() {
       const id = data.property?.id;
       if (!id) throw new Error('Property was saved without an ID.');
       const destination = stage === 'Design' ? '/design/house' : '/property/work';
-      window.location.href = destination + '?propertyRecordId=' + encodeURIComponent(id);
+      const params = new URLSearchParams({ propertyRecordId: id });
+      if (actionTitle) params.set('title', actionTitle);
+      if (workType) params.set('workType', workType);
+      window.location.href = destination + '?' + params.toString();
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Unable to save the property.');
       setSaving(false);
