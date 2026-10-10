@@ -26,8 +26,13 @@ export default function PropertyWorkPage() {
   const [propertyRecordId,setPropertyRecordId]=useState('');
 
   useEffect(() => {
-    if (typeof window !== 'undefined') {
-      setPropertyRecordId(new URLSearchParams(window.location.search).get('propertyRecordId') || '');
+    const params = new URLSearchParams(window.location.search);
+    setPropertyRecordId(params.get('propertyRecordId') || '');
+    const requestedTitle = params.get('title');
+    if (requestedTitle) setTitle(requestedTitle);
+    const requestedType = params.get('workType');
+    if (requestedType && workTypes.some(value => value.toLowerCase() === requestedType.toLowerCase())) {
+      setType(workTypes.find(value => value.toLowerCase() === requestedType.toLowerCase()) || 'Other');
     }
   }, []);
 
