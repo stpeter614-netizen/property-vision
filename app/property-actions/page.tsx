@@ -60,7 +60,30 @@ export default function PropertyActions() {
             <div className="tag-list">
               {action.items.map(item => <span className="tag" key={item}>{item}</span>)}
             </div>
-            <a className="button" href={'/start?type=' + action.id}>Start this project</a>
+            <a className="button" href={
+              '/property/start?stage=' + ({
+                build: 'Construction',
+                renovate: 'Renovation',
+                improve: 'Upgrade',
+                estimate: 'Planning',
+                professional: 'Maintenance',
+              }[action.id] || 'Planning') +
+              '&action=' + encodeURIComponent(action.id) +
+              '&title=' + encodeURIComponent(({
+                build: 'New build project',
+                renovate: 'Property renovation',
+                improve: 'Property improvement',
+                estimate: 'Project cost estimate',
+                professional: 'Find a professional for my project',
+              }[action.id] || 'Property project')) +
+              '&workType=' + encodeURIComponent(({
+                build: 'Other',
+                renovate: 'Renovation',
+                improve: 'Upgrade',
+                estimate: 'Inspection',
+                professional: 'Inspection',
+              }[action.id] || 'Other'))
+            }>Start this project</a>
           </article>
         ))}
       </section>
