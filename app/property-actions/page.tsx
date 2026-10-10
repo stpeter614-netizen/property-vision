@@ -36,6 +36,14 @@ const actions = [
   },
 ];
 
+const workflows: Record<string, { stage: string; title: string; workType: string }> = {
+  build: { stage: 'Construction', title: 'New build project', workType: 'Other' },
+  renovate: { stage: 'Renovation', title: 'Property renovation', workType: 'Renovation' },
+  improve: { stage: 'Upgrade', title: 'Property improvement', workType: 'Upgrade' },
+  estimate: { stage: 'Planning', title: 'Project cost estimate', workType: 'Inspection' },
+  professional: { stage: 'Maintenance', title: 'Find a professional for my project', workType: 'Inspection' },
+};
+
 export default function PropertyActions() {
   return (
     <main className="shell">
@@ -61,28 +69,10 @@ export default function PropertyActions() {
               {action.items.map(item => <span className="tag" key={item}>{item}</span>)}
             </div>
             <a className="button" href={
-              '/property/start?stage=' + ({
-                build: 'Construction',
-                renovate: 'Renovation',
-                improve: 'Upgrade',
-                estimate: 'Planning',
-                professional: 'Maintenance',
-              }[action.id] || 'Planning') +
+              '/property/start?stage=' + encodeURIComponent(workflows[action.id]?.stage || 'Planning') +
               '&action=' + encodeURIComponent(action.id) +
-              '&title=' + encodeURIComponent(({
-                build: 'New build project',
-                renovate: 'Property renovation',
-                improve: 'Property improvement',
-                estimate: 'Project cost estimate',
-                professional: 'Find a professional for my project',
-              }[action.id] || 'Property project')) +
-              '&workType=' + encodeURIComponent(({
-                build: 'Other',
-                renovate: 'Renovation',
-                improve: 'Upgrade',
-                estimate: 'Inspection',
-                professional: 'Inspection',
-              }[action.id] || 'Other'))
+              '&title=' + encodeURIComponent(workflows[action.id]?.title || 'Property project') +
+              '&workType=' + encodeURIComponent(workflows[action.id]?.workType || 'Other')
             }>Start this project</a>
           </article>
         ))}
