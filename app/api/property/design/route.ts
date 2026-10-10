@@ -124,7 +124,7 @@ export async function POST(request: Request) {
     if (!process.env.OPENAI_API_KEY) return NextResponse.json({ error: 'Render engine is not configured.' }, { status: 503 });
 
     const { data: render, error: renderError } = await client.from('property_render_requests')
-      .select('id,property_record_id,owner_user_id,render_type,prompt,status')
+      .select('id,property_record_id,owner_user_id,render_type,prompt,status,image_path')
       .eq('id', renderId).eq('property_record_id', propertyRecordId).maybeSingle();
     if (renderError || !render) return NextResponse.json({ error: 'Render request not found.' }, { status: 404 });
     if (render.status === 'ready' && render.image_path) return NextResponse.json({ render });
